@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "7c5c8212-90fe-47da-8696-55c03562e9ae"
+      }
+    },
+    "android": {
+      "package": "com.vijitbhadana.solosparkfirebaseapp"
+    }
+  }
+}
