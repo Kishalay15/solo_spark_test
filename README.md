@@ -74,7 +74,9 @@ From your project root:
 ```bash
 npm run android
 ```
+
 OR
+
 ```bash
 npx expo run:android
 ```
