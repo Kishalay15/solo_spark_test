@@ -8,6 +8,11 @@ export interface User {
   currentPoints: number;
   privacyLevel: "private" | "friends" | "public";
   phoneNumber: string;
+  emotionalProfile?: {
+    currentMood: string;
+    moodFrequency: string;
+    emotionalNeeds: string;
+  };
 }
 
 export interface UserSettings {
