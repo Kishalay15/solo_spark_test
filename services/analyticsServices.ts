@@ -13,6 +13,7 @@ import type {
   AnalysisResult,
   ResponsePatterns,
 } from "./analyticsServices.types";
+import type { PersonalityTrait, traitScore } from "./models.types";
 
 import {
   POSITIVE_KEYWORDS,
@@ -22,12 +23,13 @@ import {
 } from "@/constants/analyticsKeywords";
 
 class AnalyticsService {
-  private getCurrentUserId(): string {
-    return "demo-user-123";
+  private getCurrentUserId(userId?: string): string {
+    return userId || "demo-user-123";
   }
 
   private _logError(error: unknown, message: string): void {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     const errorCode = (error as any)?.code || "Unknown";
     const errorStack = error instanceof Error ? error.stack : "No stack trace";
     console.error(`❌ ${message}:`, {
@@ -39,12 +41,12 @@ class AnalyticsService {
   }
 
   // Fetch user profile
-  async fetchUserProfile(): Promise<AnalyticsUserProfile | null> {
+  async fetchUserProfile(userId: string): Promise<AnalyticsUserProfile | null> {
     try {
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
       const userDoc = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .get();
 
       if (userDoc.exists()) {
@@ -62,17 +64,18 @@ class AnalyticsService {
   }
 
   private async fetchCollection<T>(
+    userId: string,
     collectionPath: string,
     orderBy?: { field: string; direction: "asc" | "desc" }
   ): Promise<T[]> {
     try {
-      const userId = this.getCurrentUserId();
-      if (!userId) {
+      const currentUserId = this.getCurrentUserId(userId);
+      if (!currentUserId) {
         throw new Error("User not authenticated");
       }
 
       let query: FirebaseFirestoreTypes.Query = firestore().collection(
-        `solo_spark_user/${userId}/${collectionPath}`
+        `solo_spark_user/${currentUserId}/${collectionPath}`
       );
 
       if (orderBy) {
@@ -94,27 +97,45 @@ class AnalyticsService {
   }
 
   // Fetch all personality traits for a user
-  async fetchPersonalityTraits(): Promise<AnalyticsPersonalityTrait[]> {
-    return this.fetchCollection<AnalyticsPersonalityTrait>(
-      "PersonalityTraits",
-      { field: "timestamp", direction: "desc" }
-    );
+  async fetchPersonalityTraits(
+    userId: string
+  ): Promise<AnalyticsPersonalityTrait[]> {
+    const rawTraits = await this.fetchCollection<
+      PersonalityTrait & {
+        id: string;
+        timestamp: FirebaseFirestoreTypes.Timestamp;
+      }
+    >(userId, "PersonalityTraits", { field: "timestamp", direction: "desc" });
+
+    // Map raw traits (with traitScore) to AnalyticsPersonalityTrait (with numbers)
+    return rawTraits.map((trait) => ({
+      id: trait.id,
+      openness: trait.openness.value * trait.openness.weight * 10, // Scale 0-1 to 1-10
+      neuroticism: trait.neuroticism.value * trait.neuroticism.weight * 10, // Scale 0-1 to 1-10
+      agreeableness:
+        trait.agreeableness.value * trait.agreeableness.weight * 10, // Scale 0-1 to 1-10
+      timestamp: trait.timestamp,
+    }));
   }
 
   // Fetch all mood entries for a user
-  async fetchMoodEntries(): Promise<AnalyticsMoodEntry[]> {
-    return this.fetchCollection<AnalyticsMoodEntry>("MoodHistory", {
+  async fetchMoodEntries(userId: string): Promise<AnalyticsMoodEntry[]> {
+    return this.fetchCollection<AnalyticsMoodEntry>(userId, "MoodHistory", {
       field: "timestamp",
       direction: "desc",
     });
   }
 
   // Fetch all quest responses for a user
-  async fetchQuestResponses(): Promise<AnalyticsQuestResponse[]> {
-    return this.fetchCollection<AnalyticsQuestResponse>("QuestResponses", {
-      field: "timestamp",
-      direction: "desc",
-    });
+  async fetchQuestResponses(userId: string): Promise<AnalyticsQuestResponse[]> {
+    return this.fetchCollection<AnalyticsQuestResponse>(
+      userId,
+      "QuestResponses",
+      {
+        field: "timestamp",
+        direction: "desc",
+      }
+    );
   }
 
   // Fetch quest details by ID
@@ -143,7 +164,7 @@ class AnalyticsService {
   }
 
   // Comprehensive analysis of quest responses and update user schema
-  async analyzeAndUpdateUserSchema(): Promise<{
+  async analyzeAndUpdateUserSchema(userId: string): Promise<{
     personalityUpdated: boolean;
     moodUpdated: boolean;
     emotionalNeedsUpdated: boolean;
@@ -153,8 +174,8 @@ class AnalyticsService {
       console.log("🔄 Starting comprehensive user schema analysis...");
 
       const [responses, userProfile] = await Promise.all([
-        this.fetchQuestResponses(),
-        this.fetchUserProfile(),
+        this.fetchQuestResponses(userId),
+        this.fetchUserProfile(userId),
       ]);
 
       if (!userProfile) {
@@ -177,7 +198,7 @@ class AnalyticsService {
         analysis.personalityChanges.neuroticism !== 0 ||
         analysis.personalityChanges.agreeableness !== 0
       ) {
-        await this.updatePersonalityTraits(analysis.personalityChanges);
+        await this.updatePersonalityTraits(userId, analysis.personalityChanges);
         results.personalityUpdated = true;
       }
 
@@ -199,7 +220,7 @@ class AnalyticsService {
           userProfile.emotionalProfile.currentMood !== "Negative");
 
       if (shouldUpdateMood) {
-        await this.updateUserMood(analysis.moodTrend);
+        await this.updateUserMood(userId, analysis.moodTrend);
         results.moodUpdated = true;
         console.log(
           "✅ Mood updated from",
@@ -215,14 +236,14 @@ class AnalyticsService {
       if (
         analysis.emotionalNeeds !== userProfile.emotionalProfile.emotionalNeeds
       ) {
-        await this.updateEmotionalNeeds(analysis.emotionalNeeds);
+        await this.updateEmotionalNeeds(userId, analysis.emotionalNeeds);
         results.emotionalNeedsUpdated = true;
       }
 
       // Update compatibility score
       const newCompatibilityScore = this.calculateCompatibilityScore(analysis);
       if (newCompatibilityScore !== userProfile.compatibilityScore) {
-        await this.updateCompatibilityScore(newCompatibilityScore);
+        await this.updateCompatibilityScore(userId, newCompatibilityScore);
         results.compatibilityScoreUpdated = true;
       }
 
@@ -312,13 +333,12 @@ class AnalyticsService {
   }
 
   // Update personality traits
-  private async updatePersonalityTraits(changes: {
-    openness: number;
-    neuroticism: number;
-    agreeableness: number;
-  }): Promise<void> {
+  private async updatePersonalityTraits(
+    userId: string,
+    changes: PersonalityResponse
+  ): Promise<void> {
     try {
-      const currentTraits = await this.fetchPersonalityTraits();
+      const currentTraits = await this.fetchPersonalityTraits(userId);
       const latestTrait = currentTraits[0] || {
         openness: 5,
         neuroticism: 5,
@@ -326,32 +346,36 @@ class AnalyticsService {
       };
 
       // Calculate new values (clamp between 1-10)
-      const newTrait = {
-        openness: Math.max(
-          1,
-          Math.min(10, latestTrait.openness + changes.openness)
-        ),
-        neuroticism: Math.max(
-          1,
-          Math.min(10, latestTrait.neuroticism + changes.neuroticism)
-        ),
-        agreeableness: Math.max(
-          1,
-          Math.min(10, latestTrait.agreeableness + changes.agreeableness)
-        ),
-      };
+      const newOpenness = Math.max(
+        1,
+        Math.min(10, latestTrait.openness + changes.openness)
+      );
+      const newNeuroticism = Math.max(
+        1,
+        Math.min(10, latestTrait.neuroticism + changes.neuroticism)
+      );
+      const newAgreeableness = Math.max(
+        1,
+        Math.min(10, latestTrait.agreeableness + changes.agreeableness)
+      );
 
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
       await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("PersonalityTraits")
         .add({
-          ...newTrait,
+          openness: { value: newOpenness / 10, weight: 1 },
+          neuroticism: { value: newNeuroticism / 10, weight: 1 },
+          agreeableness: { value: newAgreeableness / 10, weight: 1 },
           timestamp: firestore.FieldValue.serverTimestamp(),
         });
 
-      console.log("✅ Personality traits updated:", newTrait);
+      console.log("✅ Personality traits updated:", {
+        openness: newOpenness,
+        neuroticism: newNeuroticism,
+        agreeableness: newAgreeableness,
+      });
     } catch (error) {
       this._logError(error, "Error updating personality traits");
       throw error;
@@ -359,18 +383,21 @@ class AnalyticsService {
   }
 
   // Update user mood in profile
-  private async updateUserMood(newMood: string): Promise<void> {
+  private async updateUserMood(userId: string, newMood: string): Promise<void> {
     try {
-      const userId = this.getCurrentUserId();
-      await firestore().collection("solo_spark_user").doc(userId).update({
-        "emotionalProfile.currentMood": newMood,
-        lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      const currentUserId = this.getCurrentUserId(userId);
+      await firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .update({
+          "emotionalProfile.currentMood": newMood,
+          lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+        });
 
       // Also add to mood history
       await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("MoodHistory")
         .add({
           mood: newMood,
@@ -386,13 +413,19 @@ class AnalyticsService {
   }
 
   // Update emotional needs
-  private async updateEmotionalNeeds(newNeeds: string): Promise<void> {
+  private async updateEmotionalNeeds(
+    userId: string,
+    newNeeds: string
+  ): Promise<void> {
     try {
-      const userId = this.getCurrentUserId();
-      await firestore().collection("solo_spark_user").doc(userId).update({
-        "emotionalProfile.emotionalNeeds": newNeeds,
-        lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      const currentUserId = this.getCurrentUserId(userId);
+      await firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .update({
+          "emotionalProfile.emotionalNeeds": newNeeds,
+          lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+        });
 
       console.log("✅ Emotional needs updated:", newNeeds);
     } catch (error) {
@@ -402,13 +435,19 @@ class AnalyticsService {
   }
 
   // Update compatibility score
-  private async updateCompatibilityScore(newScore: number): Promise<void> {
+  private async updateCompatibilityScore(
+    userId: string,
+    newScore: number
+  ): Promise<void> {
     try {
-      const userId = this.getCurrentUserId();
-      await firestore().collection("solo_spark_user").doc(userId).update({
-        compatibilityScore: newScore,
-        lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+      const currentUserId = this.getCurrentUserId(userId);
+      await firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .update({
+          compatibilityScore: newScore,
+          lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+        });
 
       console.log("✅ Compatibility score updated:", newScore);
     } catch (error) {
@@ -456,21 +495,36 @@ class AnalyticsService {
     const responseLower = response.toLowerCase();
 
     // Enhanced analysis based on quest category and response content
-    const categoryKeywords = PERSONALITY_IMPACT_KEYWORDS[quest.category.toLowerCase() as keyof typeof PERSONALITY_IMPACT_KEYWORDS];
+    const categoryKeywords =
+      PERSONALITY_IMPACT_KEYWORDS[
+        quest.category.toLowerCase() as keyof typeof PERSONALITY_IMPACT_KEYWORDS
+      ];
 
     if (categoryKeywords) {
       if (categoryKeywords?.agreeableness) {
-        if (categoryKeywords.agreeableness.some((keyword: string) => responseLower.includes(keyword))) {
+        if (
+          categoryKeywords.agreeableness.some((keyword: string) =>
+            responseLower.includes(keyword)
+          )
+        ) {
           changes.agreeableness += 0.3; // Adjust as needed
         }
       }
       if (categoryKeywords?.openness) {
-        if (categoryKeywords.openness.some((keyword: string) => responseLower.includes(keyword))) {
+        if (
+          categoryKeywords.openness.some((keyword: string) =>
+            responseLower.includes(keyword)
+          )
+        ) {
           changes.openness += 0.2; // Adjust as needed
         }
       }
       if (categoryKeywords?.neuroticism) {
-        if (categoryKeywords.neuroticism.some((keyword: string) => responseLower.includes(keyword))) {
+        if (
+          categoryKeywords.neuroticism.some((keyword: string) =>
+            responseLower.includes(keyword)
+          )
+        ) {
           changes.neuroticism -= 0.2; // Adjust as needed
         }
       }
@@ -556,7 +610,8 @@ class AnalyticsService {
     const responseLower = response.toLowerCase();
 
     for (const key in EMOTIONAL_NEEDS_KEYWORDS) {
-      const keywords = EMOTIONAL_NEEDS_KEYWORDS[key as keyof typeof EMOTIONAL_NEEDS_KEYWORDS];
+      const keywords =
+        EMOTIONAL_NEEDS_KEYWORDS[key as keyof typeof EMOTIONAL_NEEDS_KEYWORDS];
       if (keywords.some((keyword: string) => responseLower.includes(keyword))) {
         return key.charAt(0).toUpperCase() + key.slice(1); // Capitalize first letter
       }
@@ -565,7 +620,7 @@ class AnalyticsService {
   }
 
   // Get comprehensive analytics summary
-  async getComprehensiveAnalytics(): Promise<{
+  async getComprehensiveAnalytics(userId: string): Promise<{
     totalResponses: number;
     averagePersonality: {
       openness: number;
@@ -581,10 +636,10 @@ class AnalyticsService {
   }> {
     try {
       const [responses, traits, moods, userProfile] = await Promise.all([
-        this.fetchQuestResponses(),
-        this.fetchPersonalityTraits(),
-        this.fetchMoodEntries(),
-        this.fetchUserProfile(),
+        this.fetchQuestResponses(userId),
+        this.fetchPersonalityTraits(userId),
+        this.fetchMoodEntries(userId),
+        this.fetchUserProfile(userId),
       ]);
 
       // Calculate average personality traits
@@ -623,7 +678,9 @@ class AnalyticsService {
       // Analyze response patterns
       const responsePatterns: ResponsePatterns = {};
       const recentResponses = responses.slice(0, 10); // Last 10 responses
-      const questIdsToFetch = recentResponses.map(response => response.questId);
+      const questIdsToFetch = recentResponses.map(
+        (response) => response.questId
+      );
 
       const fetchedQuests: { [key: string]: AnalyticsQuest } = {};
       if (questIdsToFetch.length > 0) {
@@ -632,8 +689,11 @@ class AnalyticsService {
           .where(firestore.FieldPath.documentId(), "in", questIdsToFetch)
           .get();
 
-        questDocs.forEach(doc => {
-          fetchedQuests[doc.id] = { id: doc.id, ...doc.data() } as AnalyticsQuest;
+        questDocs.forEach((doc) => {
+          fetchedQuests[doc.id] = {
+            id: doc.id,
+            ...doc.data(),
+          } as AnalyticsQuest;
         });
       }
 

@@ -17,8 +17,8 @@ import {
 } from "./firebaseServices.types";
 
 class FirebaseService {
-  private getCurrentUserId(): string {
-    return "demo-user-123";
+  private getCurrentUserId(userId?: string): string {
+    return userId || "seed-user-123";
   }
 
   private _logError(error: unknown, message: string): void {
@@ -34,13 +34,13 @@ class FirebaseService {
     });
   }
 
-  async saveUserProfile(userData: CreateUser): Promise<void> {
+  async saveUserProfile(userId: string, userData: CreateUser): Promise<void> {
     try {
       console.log("🔥 Starting Firebase save...");
       console.log("📊 User data to save:", userData);
 
-      const userId = this.getCurrentUserId();
-      console.log("👤 User ID:", userId);
+      const currentUserId = this.getCurrentUserId(userId);
+      console.log("👤 User ID:", currentUserId);
 
       // Create the user profile with proper structure
       const userProfileData = {
@@ -52,12 +52,17 @@ class FirebaseService {
         currentPoints: userData.currentPoints || 100,
         privacyLevel: userData.privacyLevel || "private",
         phoneNumber: userData.phoneNumber || "",
+        emotionalProfile: userData.emotionalProfile || {
+          currentMood: "Neutral",
+          moodFrequency: "Stable",
+          emotionalNeeds: "Support",
+        },
       };
 
       console.log("📝 Attempting to save to Firebase...");
       await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .set(userProfileData);
 
       console.log("✅ Real Firebase: User profile saved successfully!");
@@ -74,10 +79,11 @@ class FirebaseService {
   }
 
   async savePersonalityTrait(
+    userId: string,
     traitData: CreatePersonalityTrait
   ): Promise<string> {
     try {
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
 
       // Basic runtime validation for personality traits
       const validateTrait = (
@@ -110,7 +116,7 @@ class FirebaseService {
 
       const docRef = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("PersonalityTraits")
         .add(traitWithTimestamp);
 
@@ -125,9 +131,12 @@ class FirebaseService {
     }
   }
 
-  async saveMoodEntry(moodData: CreateMoodState): Promise<string> {
+  async saveMoodEntry(
+    userId: string,
+    moodData: CreateMoodState
+  ): Promise<string> {
     try {
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
 
       // Basic runtime validation for mood entry
       if (!moodData.state || moodData.state.trim() === "") {
@@ -152,7 +161,7 @@ class FirebaseService {
 
       const docRef = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("MoodHistory")
         .add(moodWithTimestamp);
 
@@ -168,10 +177,11 @@ class FirebaseService {
   }
 
   async savePointsTransaction(
+    userId: string,
     transactionData: CreatePointsTransaction
   ): Promise<string> {
     try {
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
 
       // Basic runtime validation for points transaction
       if (
@@ -199,25 +209,25 @@ class FirebaseService {
 
       const docRef = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("PointsTransactions")
         .add(transactionWithTimestamp);
 
       // Update user's total points
       const userDoc = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .get();
       const currentPoints = userDoc.data()?.currentPoints || 0;
 
       const newTotalPoints =
         transactionWithTimestamp.type === "earned"
           ? currentPoints + transactionWithTimestamp.amount
-          : currentPoints - transactionWithTimestamp.amount; // Assuming 'bonus' also adds points
+          : currentPoints + transactionWithTimestamp.amount; // 'bonus' also adds points
 
       await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .update({
           currentPoints: Math.max(0, newTotalPoints),
           lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
@@ -234,9 +244,12 @@ class FirebaseService {
     }
   }
 
-  async saveQuestResponse(responseData: CreateQuestResponse): Promise<string> {
+  async saveQuestResponse(
+    userId: string,
+    responseData: CreateQuestResponse
+  ): Promise<string> {
     try {
-      const userId = this.getCurrentUserId();
+      const currentUserId = this.getCurrentUserId(userId);
 
       // Create quest response with proper structure
       const responseWithTimestamp = {
@@ -247,7 +260,7 @@ class FirebaseService {
 
       const docRef = await firestore()
         .collection("solo_spark_user")
-        .doc(userId)
+        .doc(currentUserId)
         .collection("QuestResponses")
         .add(responseWithTimestamp);
 
@@ -265,10 +278,17 @@ class FirebaseService {
   async saveQuest(questData: CreateQuest): Promise<string> {
     try {
       // Basic runtime validation
-      if (questData.pointValue === undefined || isNaN(questData.pointValue) || questData.pointValue <= 0) {
+      if (
+        questData.pointValue === undefined ||
+        isNaN(questData.pointValue) ||
+        questData.pointValue <= 0
+      ) {
         throw new Error("Point value must be a positive number.");
       }
-      if (!questData.options || questData.options.filter(opt => opt.trim() !== "").length < 2) {
+      if (
+        !questData.options ||
+        questData.options.filter((opt) => opt.trim() !== "").length < 2
+      ) {
         throw new Error("At least two non-empty options are required.");
       }
 
@@ -296,12 +316,12 @@ class FirebaseService {
   }
 
   // Method to create a complete user profile with all subcollections
-  async createCompleteUserProfile(): Promise<void> {
+  async createCompleteUserProfile(userId: string): Promise<void> {
     try {
       console.log("🔥 Creating complete user profile with subcollections...");
 
       // First, create the main user profile
-      await this.saveUserProfile({
+      await this.saveUserProfile(userId, {
         email: "complete@example.com",
         displayName: "Complete User",
         compatibilityScore: 92,
@@ -311,33 +331,33 @@ class FirebaseService {
       });
 
       // Create personality traits
-      await this.savePersonalityTrait({
+      await this.savePersonalityTrait(userId, {
         openness: { value: 0.8, weight: 1 },
         neuroticism: { value: 0.2, weight: 1 },
         agreeableness: { value: 0.9, weight: 1 },
       });
 
       // Create mood entries
-      await this.saveMoodEntry({
+      await this.saveMoodEntry(userId, {
         state: "Happy",
         intensity: 7,
         trigger: "Good weather",
       });
 
-      await this.saveMoodEntry({
+      await this.saveMoodEntry(userId, {
         state: "Calm",
         intensity: 6,
         trigger: "Meditation",
       });
 
       // Create points transactions
-      await this.savePointsTransaction({
+      await this.savePointsTransaction(userId, {
         amount: 50,
         type: "earned",
         reason: "Completed daily quest",
       });
 
-      await this.savePointsTransaction({
+      await this.savePointsTransaction(userId, {
         amount: 20,
         type: "bonus",
         reason: "Referral bonus",
@@ -358,7 +378,7 @@ class FirebaseService {
       });
 
       // Create quest response
-      await this.saveQuestResponse({
+      await this.saveQuestResponse(userId, {
         questId: questId,
         response: "A. Take deep breaths",
       });
