@@ -41,3 +41,6 @@ app/index.tsx
 android/
 
 google-services.json
+# Ignore build and dependency folders
+node_modules/
+android/
