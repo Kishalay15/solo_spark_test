@@ -41,3 +41,5 @@ app/index.tsx
 android/
 
 google-services.json
+
+seedFirebase.ts
