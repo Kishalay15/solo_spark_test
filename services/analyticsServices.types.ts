@@ -33,19 +33,16 @@ export interface AnalyticsQuest {
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
+  compatibilityScore: number;
+  currentPoints: number;
+  privacyLevel: string;
+  phoneNumber?: string;
+  profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
+  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp; 
   emotionalProfile: {
     currentMood: string;
     moodFrequency: string;
     emotionalNeeds: string;
-  };
-  compatibilityScore: number;
-  pointsProfile: {
-    totalPoints: number;
-    level: string;
-  };
-  userSettings: {
-    notificationsEnabled: boolean;
-    theme: string;
   };
 }
 
