@@ -36,7 +36,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
-app/index.tsx
 
 android/
 
