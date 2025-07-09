@@ -16,6 +16,7 @@ async function seedFirebase() {
       compatibilityScore: 75,
       currentPoints: 500,
       privacyLevel: "public",
+      phoneNumber: "+911234567890",
       // If emotionalProfile is expected by analytics, it should be part of the User interface
       // and passed here, or handled by saveUserProfile.
       // For now, assuming analyticsService adapts or emotionalProfile is updated later.
@@ -64,34 +65,69 @@ async function seedFirebase() {
       category: "self-reflection",
       options: ["Nature", "Art", "Helping others", "Learning something new"],
       pointValue: 20,
-      responseOptions: ["Nature", "Art", "Helping others", "Learning something new"],
+      responseOptions: [
+        "Nature",
+        "Art",
+        "Helping others",
+        "Learning something new",
+      ],
       responseCount: 0,
     });
 
     const quest2Id = await firebaseService.saveQuest({
       questionText: "How do you handle stress?",
       category: "emotional intelligence",
-      options: ["Exercise", "Meditation", "Talking to a friend", "Listening to music"],
+      options: [
+        "Exercise",
+        "Meditation",
+        "Talking to a friend",
+        "Listening to music",
+      ],
       pointValue: 15,
-      responseOptions: ["Exercise", "Meditation", "Talking to a friend", "Listening to music"],
+      responseOptions: [
+        "Exercise",
+        "Meditation",
+        "Talking to a friend",
+        "Listening to music",
+      ],
       responseCount: 0,
     });
 
     const quest3Id = await firebaseService.saveQuest({
       questionText: "Describe a time you felt truly happy.",
       category: "emotional well-being",
-      options: ["Spending time with loved ones", "Achieving a goal", "Experiencing something new", "Helping someone in need"],
+      options: [
+        "Spending time with loved ones",
+        "Achieving a goal",
+        "Experiencing something new",
+        "Helping someone in need",
+      ],
       pointValue: 25,
-      responseOptions: ["Spending time with loved ones", "Achieving a goal", "Experiencing something new", "Helping someone in need"],
+      responseOptions: [
+        "Spending time with loved ones",
+        "Achieving a goal",
+        "Experiencing something new",
+        "Helping someone in need",
+      ],
       responseCount: 0,
     });
 
     const quest4Id = await firebaseService.saveQuest({
       questionText: "What is one thing you're grateful for today?",
       category: "gratitude",
-      options: ["My health", "My family/friends", "My job/studies", "A simple pleasure"],
+      options: [
+        "My health",
+        "My family/friends",
+        "My job/studies",
+        "A simple pleasure",
+      ],
       pointValue: 10,
-      responseOptions: ["My health", "My family/friends", "My job/studies", "A simple pleasure"],
+      responseOptions: [
+        "My health",
+        "My family/friends",
+        "My job/studies",
+        "A simple pleasure",
+      ],
       responseCount: 0,
     });
 
@@ -148,7 +184,5 @@ async function seedFirebase() {
     console.error("❌ Error seeding Firebase:", error);
   }
 }
-
-seedFirebase();
 
 export default seedFirebase;

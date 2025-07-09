@@ -24,7 +24,7 @@ import {
 
 class AnalyticsService {
   private getCurrentUserId(userId?: string): string {
-    return userId || "demo-user-123";
+    return userId || "seed-user-123";
   }
 
   private _logError(error: unknown, message: string): void {

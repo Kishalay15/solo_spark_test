@@ -204,7 +204,7 @@ class FirebaseService {
         type: transactionData.type || "earned", // 'earned' | 'bonus'
         reason: transactionData.reason || "Test transaction",
         timestamp: firestore.FieldValue.serverTimestamp(),
-        expiryDate: transactionData.expiryDate || undefined,
+        ...(transactionData.expiryDate && { expiryDate: transactionData.expiryDate }),
       };
 
       const docRef = await firestore()
