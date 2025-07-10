@@ -1,6 +1,6 @@
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-// 🧠 AnalyticsUserProfile (Enhanced with key metrics)
+// 🧠 AnalyticsUserProfile (Enhanced with key metrics + personality)
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
@@ -10,14 +10,28 @@ export interface AnalyticsUserProfile {
   phoneNumber?: string;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
+
   emotionalProfile: {
     currentMood: string;
-    moodStabilityScore: number; // Added for analytics
-    emotionalNeeds: string[]; // Array for multiple needs
+    moodStabilityScore: number;
+    emotionalNeeds: string[];
   };
+
+  // ✅ Personality traits influenced by tasks
+  personalityTraits: {
+    openness: number;
+    neuroticism: number;
+    agreeableness: number;
+  };
+
+  // ✅ Category affinity to track preferences
+  categoryAffinity: {
+    [category: string]: number; // e.g., "growth": 4
+  };
+
   engagementProfile: {
     interactionFrequency: number;
-    completedQuests: string[]; // Link to Tasks
+    completedQuests: string[];
   };
 }
 
@@ -29,26 +43,30 @@ export type SubTask = {
   pointValue?: number;
 };
 
-// 🧩 Task Schema (Updated with relationships and rules)
+// 🧩 Task Schema (Updated with personality impact + new categories)
 export type Task = {
   title: string;
   description: string;
-  category: 'daily' | 'weekly' | 'custom';
+  category: 'growth' | 'social' | 'self-care' | 'learning' | 'habit' | 'custom';
   pointValue: number;
+
   bonusRules?: {
     earlyCompletion?: number;
     timelyResponse?: number;
     socialInteraction?: number;
   };
+
   createdAt: FirebaseFirestoreTypes.Timestamp;
   dueDate?: FirebaseFirestoreTypes.Timestamp;
   completed: boolean;
   completedAt?: FirebaseFirestoreTypes.Timestamp;
+
   rules: {
     dailyCheckIn?: boolean;
     moodStabilityReward?: boolean;
     referralBonus?: boolean;
   };
+
   userId: string;
   assignedUsers?: string[];
   difficulty?: 'easy' | 'medium' | 'hard';
@@ -60,6 +78,13 @@ export type Task = {
   assignedBy?: string;
   dependencies?: string[];
   subTasks?: SubTask[];
+
+  // ✅ Optional: Personality impact from this task
+  personalityImpact?: {
+    openness?: number;
+    neuroticism?: number;
+    agreeableness?: number;
+  };
 };
 
 // 🎁 Reward Items (for redemption or badges)
@@ -69,7 +94,7 @@ export type Reward = {
   type: 'digital' | 'physical' | 'badge';
   cost: number;
   imageUrl?: string;
-  stock?: number; // ✅ ADDED to track item availability
+  stock?: number;
   createdAt: FirebaseFirestoreTypes.Timestamp;
   available: boolean;
 };
