@@ -40,5 +40,11 @@ app-example
 android/
 
 google-services.json
+<<<<<<< HEAD
+# Ignore build and dependency folders
+node_modules/
+android/
+=======
 
 nativewind-env.d.ts
+>>>>>>> upstream/master

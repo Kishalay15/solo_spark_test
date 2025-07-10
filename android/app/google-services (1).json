@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "301605461013",
+    "project_id": "solosparkapp",
+    "storage_bucket": "solosparkapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301605461013:android:a15908d45ce0486dd6021c",
+        "android_client_info": {
+          "package_name": "com.vijit.solospark"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkKN64czKcr8uVw_hVEhu4HZk0cC3QVpk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
