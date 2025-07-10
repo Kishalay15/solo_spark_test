@@ -1,6 +1,6 @@
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-// 🧠 AnalyticsUserProfile (Enhanced with key metrics + personality)
+/* ───── Analytics Profile ───── */
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
@@ -10,32 +10,24 @@ export interface AnalyticsUserProfile {
   phoneNumber?: string;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
-
   emotionalProfile: {
     currentMood: string;
     moodStabilityScore: number;
     emotionalNeeds: string[];
   };
-
-  // ✅ Personality traits influenced by tasks
   personalityTraits: {
     openness: number;
     neuroticism: number;
     agreeableness: number;
   };
-
-  // ✅ Category affinity to track preferences
-  categoryAffinity: {
-    [category: string]: number; // e.g., "growth": 4
-  };
-
+  categoryAffinity: { [category: string]: number };
   engagementProfile: {
     interactionFrequency: number;
     completedQuests: string[];
   };
 }
 
-// ✅ SubTask (for breaking down complex tasks)
+/* ───── Sub‑task ───── */
 export type SubTask = {
   id: string;
   title: string;
@@ -43,30 +35,26 @@ export type SubTask = {
   pointValue?: number;
 };
 
-// 🧩 Task Schema (Updated with personality impact + new categories)
+/* ───── Task ───── */
 export type Task = {
   title: string;
   description: string;
   category: 'growth' | 'social' | 'self-care' | 'learning' | 'habit' | 'custom';
   pointValue: number;
-
   bonusRules?: {
     earlyCompletion?: number;
     timelyResponse?: number;
     socialInteraction?: number;
   };
-
   createdAt: FirebaseFirestoreTypes.Timestamp;
   dueDate?: FirebaseFirestoreTypes.Timestamp;
   completed: boolean;
   completedAt?: FirebaseFirestoreTypes.Timestamp;
-
   rules: {
     dailyCheckIn?: boolean;
     moodStabilityReward?: boolean;
     referralBonus?: boolean;
   };
-
   userId: string;
   assignedUsers?: string[];
   difficulty?: 'easy' | 'medium' | 'hard';
@@ -78,36 +66,10 @@ export type Task = {
   assignedBy?: string;
   dependencies?: string[];
   subTasks?: SubTask[];
-
-  // ✅ Optional: Personality impact from this task
-  personalityImpact?: {
-    openness?: number;
-    neuroticism?: number;
-    agreeableness?: number;
-  };
+  personalityImpact?: { openness?: number; neuroticism?: number; agreeableness?: number };
 };
 
-// 🎁 Reward Items (for redemption or badges)
-export type Reward = {
-  name: string;
-  description: string;
-  type: 'digital' | 'physical' | 'badge';
-  cost: number;
-  imageUrl?: string;
-  stock?: number;
-  createdAt: FirebaseFirestoreTypes.Timestamp;
-  available: boolean;
-};
-
-// 🛒 Redemption Record (Enhanced with audit trail)
-export type Redemption = {
-  userId: string;
-  itemId: string;
-  itemName: string;
-  pointsUsed: number;
-  redeemedAt: FirebaseFirestoreTypes.Timestamp;
-  redeemedVia: 'taskCompletion' | 'shop';
-  rewardType: Reward['type'];
-  status: 'pending' | 'approved' | 'rejected';
-  processedAt?: FirebaseFirestoreTypes.Timestamp;
-};
+/* Helper: update payload that allows Firestore FieldValue */
+export type TaskUpdate = Partial<{
+  [K in keyof Task]: Task[K] | FirebaseFirestoreTypes.FieldValue;
+}>;

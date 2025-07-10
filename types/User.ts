@@ -3,15 +3,21 @@ import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 export interface User {
   email: string;
   displayName: string;
+  phoneNumber: string;
+  compatibilityScore: number;
+  currentPoints: number;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   emotionalProfile: PersonalityTrait;
-  compatibilityScore: number;
-  currentPoints: number;
   userSettings: UserSettings;
-  phoneNumber: string;
+  moodLogs?: MoodState[];                  // Optional array of mood logs
+  moodFrequency?: MoodFrequency;
+  pointsHistory?: PointsTransaction[];
+  questResponses?: QuestResponse[];
+  emotionalNeeds?: EmotionalNeeds;
 }
 
+// Mood data and states
 export interface MoodState {
   state: string;
   intensity: number;
@@ -24,40 +30,45 @@ export interface MoodFrequency {
   weeklyAverage: number;
 }
 
+// Settings and preferences
 export interface UserSettings {
   notificationPreferences: Record<string, boolean>;
-  privacyLevel: "private" | "friends" | "public";
+  privacyLevel: 'private' | 'friends' | 'public';
 }
 
+// Personality breakdown
 export interface PersonalityTrait {
-  openness: traitScore;
-  neuroticism: traitScore;
-  agreeableness: traitScore;
+  openness: TraitScore;
+  neuroticism: TraitScore;
+  agreeableness: TraitScore;
 }
 
-export interface traitScore {
+export interface TraitScore {
   value: number;
   weight: number;
 }
 
+// Emotional needs of the user
 export interface EmotionalNeeds {
-  empathy: emotionalValues;
-  validation: emotionalValues;
+  empathy: EmotionalValues;
+  validation: EmotionalValues;
 }
 
-export interface emotionalValues {
+export interface EmotionalValues {
   type: string;
   intensity: number;
 }
 
+// Points-related transactions (earned, bonuses, etc.)
 export interface PointsTransaction {
   amount: number;
-  type: "earned" | "bonus";
+  type: 'earned' | 'bonus';
   reason: string;
   timestamp: FirebaseFirestoreTypes.Timestamp;
   expiryDate?: FirebaseFirestoreTypes.Timestamp;
 }
 
+// Quest responses tied to the user
 export interface QuestResponse {
   questId: string;
   response: string;
