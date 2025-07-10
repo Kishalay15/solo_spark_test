@@ -80,6 +80,9 @@ OR
 ```bash
 npx expo run:android
 ```
+<<<<<<< HEAD
+This is a safe update to enable pull request.
+=======
 
 ## Setup NativeWind
 
@@ -165,3 +168,4 @@ import "../global.css"
 
 export default function RootLayout() {...}
 ```
+>>>>>>> upstream/master
