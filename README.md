@@ -115,7 +115,7 @@ module.exports = {
 };
 ```
 
-## 3. Create a CSS file and add the Tailwind directives.
+## 3. Create a CSS file and add the Tailwind directives
 
 Add global.css file in your project root (i.e. same level as app.json)
 

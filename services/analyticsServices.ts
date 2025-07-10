@@ -13,7 +13,7 @@ import type {
   AnalysisResult,
   ResponsePatterns,
 } from "./analyticsServices.types";
-import type { PersonalityTrait, traitScore } from "./models.types";
+import type { PersonalityTrait, traitScore } from "../types/user.types";
 
 import {
   POSITIVE_KEYWORDS,
