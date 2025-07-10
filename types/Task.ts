@@ -1,8 +1,6 @@
-// types/Task.ts
-
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-// 🧠 User Analytics Profile
+// 🧠 AnalyticsUserProfile (Enhanced with key metrics)
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
@@ -14,8 +12,12 @@ export interface AnalyticsUserProfile {
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   emotionalProfile: {
     currentMood: string;
-    moodFrequency: string;
-    emotionalNeeds: string;
+    moodStabilityScore: number; // Added for analytics
+    emotionalNeeds: string[]; // Array for multiple needs
+  };
+  engagementProfile: {
+    interactionFrequency: number;
+    completedQuests: string[]; // Link to Tasks
   };
 }
 
@@ -27,46 +29,53 @@ export type SubTask = {
   pointValue?: number;
 };
 
-// 🧩 Task Schema
+// 🧩 Task Schema (Updated with relationships and rules)
 export type Task = {
-  id?: string; // Firestore auto-generates this
   title: string;
   description: string;
   category: 'daily' | 'weekly' | 'custom';
   pointValue: number;
-  bonusPoints?: number; // Optional extra points
+  bonusRules?: {
+    earlyCompletion?: number;
+    timelyResponse?: number;
+    socialInteraction?: number;
+  };
   createdAt: FirebaseFirestoreTypes.Timestamp;
   dueDate?: FirebaseFirestoreTypes.Timestamp;
   completed: boolean;
   completedAt?: FirebaseFirestoreTypes.Timestamp;
-  rules: string[]; // Conditions or steps
-  userId: string; // Reference to the user
-  difficulty?: 'easy' | 'medium' | 'hard'; // Optional difficulty tag
-  tags?: string[]; // For searching or filtering
+  rules: {
+    dailyCheckIn?: boolean;
+    moodStabilityReward?: boolean;
+    referralBonus?: boolean;
+  };
+  userId: string;
+  assignedUsers?: string[];
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string[];
   recurrence?: {
     interval: 'daily' | 'weekly' | 'monthly';
-    repeatUntil?: FirebaseFirestoreTypes.Timestamp;
+    maxOccurrences?: number;
   };
-  assignedBy?: string; // For admin/peer assigned tasks
-  dependencies?: string[]; // IDs of tasks that must be completed first
-  subTasks?: SubTask[]; // Array of sub-tasks
+  assignedBy?: string;
+  dependencies?: string[];
+  subTasks?: SubTask[];
 };
 
 // 🎁 Reward Items (for redemption or badges)
 export type Reward = {
-  id?: string;
   name: string;
   description: string;
   type: 'digital' | 'physical' | 'badge';
   cost: number;
   imageUrl?: string;
+  stock?: number; // ✅ ADDED to track item availability
   createdAt: FirebaseFirestoreTypes.Timestamp;
   available: boolean;
 };
 
-// 🛒 Redemption Record
+// 🛒 Redemption Record (Enhanced with audit trail)
 export type Redemption = {
-  redemptionId?: string;
   userId: string;
   itemId: string;
   itemName: string;
@@ -75,4 +84,5 @@ export type Redemption = {
   redeemedVia: 'taskCompletion' | 'shop';
   rewardType: Reward['type'];
   status: 'pending' | 'approved' | 'rejected';
+  processedAt?: FirebaseFirestoreTypes.Timestamp;
 };
