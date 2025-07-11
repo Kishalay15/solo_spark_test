@@ -9,9 +9,9 @@ import {
   ScrollView,
   Switch,
 } from "react-native";
-import firebaseService from "@/services/firebaseServices";
+import firebaseService from "@/services/userServices";
 import { QuestFormProps, QuestData } from "./questForm.types";
-import { CreateQuest } from "@/services/firebaseServices.types";
+import { CreateQuest } from "@/services/userServices.types";
 
 const QuestForm: React.FC<QuestFormProps> = ({ onBack }) => {
   const [questionText, setQuestionText] = useState("");
@@ -79,7 +79,9 @@ const QuestForm: React.FC<QuestFormProps> = ({ onBack }) => {
         category: category,
         options: validOptions,
         pointValue: parseInt(pointValue),
-        responseOptions: validOptions.map((_, index) => String.fromCharCode(65 + index)),
+        responseOptions: validOptions.map((_, index) =>
+          String.fromCharCode(65 + index)
+        ),
         responseCount: 0,
       };
 
@@ -111,10 +113,7 @@ const QuestForm: React.FC<QuestFormProps> = ({ onBack }) => {
     setPointValue("10");
   };
 
-  const predefinedCategories: string[] = [
-    "values",
-    "growth",
-  ];
+  const predefinedCategories: string[] = ["values", "growth"];
 
   return (
     <ScrollView style={styles.container}>

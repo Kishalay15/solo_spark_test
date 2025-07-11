@@ -8,10 +8,11 @@ import {
   ScrollView,
 } from "react-native";
 import firestore from "@react-native-firebase/firestore";
-import firebaseService from "@/services/firebaseServices";
-import { CreateUser, CreateMoodState, CreatePersonalityTrait, CreatePointsTransaction, CreateQuest, CreateQuestResponse } from "@/services/firebaseServices.types";
+import firebaseService from "@/services/userServices";
+import { CreateUser } from "@/services/userServices.types";
 
 const FirebaseTest: React.FC = () => {
+  const userId = "seed-user-123";
   const [testResults, setTestResults] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -90,7 +91,7 @@ const FirebaseTest: React.FC = () => {
         phoneNumber: "+1234567890",
       };
 
-      await firebaseService.saveUserProfile(userData);
+      await firebaseService.saveUserProfile(userId, userData);
       addLog("✅ User profile saved successfully!");
       Alert.alert("Success", "User profile saved to Firebase!");
     } catch (error) {
@@ -108,7 +109,7 @@ const FirebaseTest: React.FC = () => {
     try {
       addLog("🔥 Creating complete user profile with all subcollections...");
 
-      await firebaseService.createCompleteUserProfile();
+      await firebaseService.createCompleteUserProfile(userId);
 
       addLog("✅ Complete user profile created successfully!");
       addLog("📊 Check Firebase console for:");
@@ -148,7 +149,7 @@ const FirebaseTest: React.FC = () => {
 
       // Test PersonalityTraits
       addLog("📊 Testing PersonalityTraits...");
-      const traitId = await firebaseService.savePersonalityTrait({
+      const traitId = await firebaseService.savePersonalityTrait(userId, {
         openness: { value: 0.7, weight: 1 },
         neuroticism: { value: 0.4, weight: 1 },
         agreeableness: { value: 0.8, weight: 1 },
@@ -157,7 +158,7 @@ const FirebaseTest: React.FC = () => {
 
       // Test MoodHistory
       addLog("😊 Testing MoodHistory...");
-      const moodId = await firebaseService.saveMoodEntry({
+      const moodId = await firebaseService.saveMoodEntry(userId, {
         state: "Excited",
         intensity: 7,
         trigger: "Test trigger",
@@ -166,11 +167,14 @@ const FirebaseTest: React.FC = () => {
 
       // Test PointsTransactions
       addLog("💰 Testing PointsTransactions...");
-      const transactionId = await firebaseService.savePointsTransaction({
-        amount: 25,
-        type: "earned",
-        reason: "Testing points transaction",
-      });
+      const transactionId = await firebaseService.savePointsTransaction(
+        userId,
+        {
+          amount: 25,
+          type: "earned",
+          reason: "Testing points transaction",
+        }
+      );
       addLog(`✅ Points transaction saved with ID: ${transactionId}`);
 
       // Test Quests
@@ -187,7 +191,7 @@ const FirebaseTest: React.FC = () => {
 
       // Test QuestResponses
       addLog("📝 Testing QuestResponses...");
-      const responseId = await firebaseService.saveQuestResponse({
+      const responseId = await firebaseService.saveQuestResponse(userId, {
         questId: questId,
         response: "A. Exercise",
       });
