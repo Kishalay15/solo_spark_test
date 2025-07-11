@@ -1,79 +1,194 @@
-import firestore from "@react-native-firebase/firestore";
+import firestore, {
+  FirebaseFirestoreTypes,
+} from "@react-native-firebase/firestore";
 import {
   CreateMoodState,
   CreatePersonalityTrait,
   CreatePointsTransaction,
-  CreateQuest,
-  CreateQuestResponse,
   CreateUser,
   MoodState,
   PersonalityTrait,
   PointsTransaction,
-  Quest,
   QuestResponse,
   User,
   traitScore,
   UserSettings,
-} from "./firebaseServices.types";
+} from "./userServices.types";
+import { CreateQuest, CreateQuestResponse, Quest } from "./questServices.types";
+import _logError from "@/utils/logErrors";
+import questService from "./questServices";
+import {
+  AnalyticsMoodEntry,
+  AnalyticsPersonalityTrait,
+  AnalyticsUserProfile,
+} from "./analyticsServices.types";
 
-class FirebaseService {
+class UserService {
   private getCurrentUserId(userId?: string): string {
     return userId || "seed-user-123";
   }
 
-  private _logError(error: unknown, message: string): void {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    const errorCode = (error as any)?.code || "Unknown";
-    const errorStack = error instanceof Error ? error.stack : "No stack trace";
-    console.error(`❌ ${message}:`, {
-      message: errorMessage,
-      code: errorCode,
-      stack: errorStack,
-      originalError: error,
+  // private _logError(error: unknown, message: string): void {
+  //   const errorMessage =
+  //     error instanceof Error ? error.message : "Unknown error";
+  //   const errorCode = (error as any)?.code || "Unknown";
+  //   const errorStack = error instanceof Error ? error.stack : "No stack trace";
+  //   console.error(`❌ ${message}:`, {
+  //     message: errorMessage,
+  //     code: errorCode,
+  //     stack: errorStack,
+  //     originalError: error,
+  //   });
+  // }
+
+  private async fetchCollection<T>(
+    userId: string,
+    collectionPath: string,
+    orderBy?: { field: string; direction: "asc" | "desc" }
+  ): Promise<T[]> {
+    try {
+      const currentUserId = this.getCurrentUserId(userId);
+      if (!currentUserId) {
+        throw new Error("User not authenticated");
+      }
+
+      let query: FirebaseFirestoreTypes.Query = firestore().collection(
+        `solo_spark_user/${currentUserId}/${collectionPath}`
+      );
+
+      if (orderBy) {
+        query = query.orderBy(orderBy.field, orderBy.direction);
+      }
+
+      const snapshot = await query.get();
+      const items: T[] = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() } as T);
+      });
+
+      console.log(`✅ Fetched ${items.length} items from ${collectionPath}`);
+      return items;
+    } catch (error) {
+      _logError(error, `Error fetching collection ${collectionPath}`);
+      throw error;
+    }
+  }
+
+  async fetchUserProfile(userId: string): Promise<AnalyticsUserProfile | null> {
+    try {
+      const currentUserId = this.getCurrentUserId(userId);
+      const userDoc = await firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .get();
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as AnalyticsUserProfile;
+        console.log("✅ Fetched user profile");
+        return userData;
+      } else {
+        console.log("❌ User profile not found");
+        return null;
+      }
+    } catch (error) {
+      _logError(error, "Error fetching user profile");
+      throw error;
+    }
+  }
+
+  async fetchPersonalityTraits(
+    userId: string
+  ): Promise<AnalyticsPersonalityTrait[]> {
+    const rawTraits = await this.fetchCollection<
+      PersonalityTrait & {
+        id: string;
+        timestamp: FirebaseFirestoreTypes.Timestamp;
+      }
+    >(userId, "PersonalityTraits", { field: "timestamp", direction: "desc" });
+
+    // Map raw traits (with traitScore) to AnalyticsPersonalityTrait (with numbers)
+    return rawTraits.map((trait) => ({
+      id: trait.id,
+      openness: trait.openness.value * trait.openness.weight * 10, // Scale 0-1 to 1-10
+      neuroticism: trait.neuroticism.value * trait.neuroticism.weight * 10, // Scale 0-1 to 1-10
+      agreeableness:
+        trait.agreeableness.value * trait.agreeableness.weight * 10, // Scale 0-1 to 1-10
+      timestamp: trait.timestamp,
+    }));
+  }
+
+  async fetchMoodEntries(userId: string): Promise<AnalyticsMoodEntry[]> {
+    return this.fetchCollection<AnalyticsMoodEntry>(userId, "MoodHistory", {
+      field: "timestamp",
+      direction: "desc",
     });
+  }
+
+  private async _createUser(
+    userId: string,
+    userData: CreateUser
+  ): Promise<void> {
+    const userProfileData = {
+      email: userData.email || "test@example.com",
+      displayName: userData.displayName || "Test User",
+      profileCreatedAt: firestore.FieldValue.serverTimestamp(),
+      lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+      compatibilityScore: userData.compatibilityScore || 85,
+      currentPoints: userData.currentPoints || 100,
+      privacyLevel: userData.privacyLevel || "private",
+      phoneNumber: userData.phoneNumber || "",
+      emotionalProfile: userData.emotionalProfile || {
+        currentMood: "Neutral",
+        moodFrequency: "Stable",
+        emotionalNeeds: ["Support"],
+      },
+    };
+
+    await firestore()
+      .collection("solo_spark_user")
+      .doc(userId)
+      .set(userProfileData);
+    console.log("✅ Real Firebase: User profile created successfully!");
+    console.log("📊 Saved data:", userProfileData);
+  }
+
+  private async _updateUser(
+    userId: string,
+    userData: Partial<CreateUser>
+  ): Promise<void> {
+    const userProfileData = {
+      ...userData,
+      lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+    };
+
+    await firestore()
+      .collection("solo_spark_user")
+      .doc(userId)
+      .update(userProfileData);
+    console.log("✅ Real Firebase: User profile updated successfully!");
+    console.log("📊 Updated data:", userProfileData);
   }
 
   async saveUserProfile(userId: string, userData: CreateUser): Promise<void> {
     try {
       console.log("🔥 Starting Firebase save...");
-      console.log("📊 User data to save:", userData);
-
       const currentUserId = this.getCurrentUserId(userId);
       console.log("👤 User ID:", currentUserId);
 
-      // Create the user profile with proper structure
-      const userProfileData = {
-        email: userData.email || "test@example.com",
-        displayName: userData.displayName || "Test User",
-        profileCreatedAt: firestore.FieldValue.serverTimestamp(),
-        lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
-        compatibilityScore: userData.compatibilityScore || 85,
-        currentPoints: userData.currentPoints || 100,
-        privacyLevel: userData.privacyLevel || "private",
-        phoneNumber: userData.phoneNumber || "",
-        emotionalProfile: userData.emotionalProfile || {
-          currentMood: "Neutral",
-          moodFrequency: "Stable",
-          emotionalNeeds: ["Support"],
-        },
-      };
-
-      console.log("📝 Attempting to save to Firebase...");
-      await firestore()
+      const userDoc = await firestore()
         .collection("solo_spark_user")
         .doc(currentUserId)
-        .set(userProfileData);
+        .get();
 
-      console.log("✅ Real Firebase: User profile saved successfully!");
-      console.log("📊 Saved data:", userProfileData);
+      if (userDoc.exists()) {
+        console.log("📝 Attempting to update existing user in Firebase...");
+        await this._updateUser(currentUserId, userData);
+      } else {
+        console.log("📝 Attempting to create new user in Firebase...");
+        await this._createUser(currentUserId, userData);
+      }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      const errorCode = (error as any)?.code || "Unknown";
-      const errorStack =
-        error instanceof Error ? error.stack : "No stack trace";
-      this._logError(error, "Firebase Error in saveUserProfile");
+      _logError(error, "Firebase Error in saveUserProfile");
       throw error;
     }
   }
@@ -126,7 +241,7 @@ class FirebaseService {
       );
       return docRef.id;
     } catch (error) {
-      this._logError(error, "Firebase Error in savePersonalityTrait");
+      _logError(error, "Firebase Error in savePersonalityTrait");
       throw error;
     }
   }
@@ -171,7 +286,7 @@ class FirebaseService {
       );
       return docRef.id;
     } catch (error) {
-      this._logError(error, "Firebase Error in saveMoodEntry");
+      _logError(error, "Firebase Error in saveMoodEntry");
       throw error;
     }
   }
@@ -204,7 +319,9 @@ class FirebaseService {
         type: transactionData.type || "earned", // 'earned' | 'bonus'
         reason: transactionData.reason || "Test transaction",
         timestamp: firestore.FieldValue.serverTimestamp(),
-        ...(transactionData.expiryDate && { expiryDate: transactionData.expiryDate }),
+        ...(transactionData.expiryDate && {
+          expiryDate: transactionData.expiryDate,
+        }),
       };
 
       const docRef = await firestore()
@@ -239,78 +356,7 @@ class FirebaseService {
       );
       return docRef.id;
     } catch (error) {
-      this._logError(error, "Firebase Error in savePointsTransaction");
-      throw error;
-    }
-  }
-
-  async saveQuestResponse(
-    userId: string,
-    responseData: CreateQuestResponse
-  ): Promise<string> {
-    try {
-      const currentUserId = this.getCurrentUserId(userId);
-
-      // Create quest response with proper structure
-      const responseWithTimestamp = {
-        questId: responseData.questId || "quest-123",
-        response: responseData.response || "Option A",
-        timestamp: firestore.FieldValue.serverTimestamp(),
-      };
-
-      const docRef = await firestore()
-        .collection("solo_spark_user")
-        .doc(currentUserId)
-        .collection("QuestResponses")
-        .add(responseWithTimestamp);
-
-      console.log(
-        "✅ Real Firebase: Quest response saved successfully",
-        responseWithTimestamp
-      );
-      return docRef.id;
-    } catch (error) {
-      this._logError(error, "Firebase Error in saveQuestResponse");
-      throw error;
-    }
-  }
-
-  async saveQuest(questData: CreateQuest): Promise<string> {
-    try {
-      // Basic runtime validation
-      if (
-        questData.pointValue === undefined ||
-        isNaN(questData.pointValue) ||
-        questData.pointValue <= 0
-      ) {
-        throw new Error("Point value must be a positive number.");
-      }
-      if (
-        !questData.options ||
-        questData.options.filter((opt) => opt.trim() !== "").length < 2
-      ) {
-        throw new Error("At least two non-empty options are required.");
-      }
-
-      // Create quest with proper structure
-      const questWithId = {
-        questionText: questData.questionText || "How are you feeling today?",
-        category: questData.category || "emotional intelligence",
-        options: questData.options || ["A. Happy", "B. Sad", "C. Neutral"],
-        pointValue: questData.pointValue || 10,
-        createdAt: firestore.FieldValue.serverTimestamp(),
-        responseOptions: questData.responseOptions || [],
-        responseCount: questData.responseCount || 0,
-      };
-
-      const docRef = await firestore()
-        .collection("solo_spark_quest")
-        .add(questWithId);
-
-      console.log("✅ Real Firebase: Quest saved successfully", questWithId);
-      return docRef.id;
-    } catch (error) {
-      this._logError(error, "Firebase Error in saveQuest");
+      _logError(error, "Firebase Error in savePointsTransaction");
       throw error;
     }
   }
@@ -364,7 +410,7 @@ class FirebaseService {
       });
 
       // Create a quest first
-      const questId = await this.saveQuest({
+      const questId = await questService.saveQuest({
         questionText: "What would you do when feeling stressed?",
         category: "growth",
         options: [
@@ -378,19 +424,29 @@ class FirebaseService {
       });
 
       // Create quest response
-      await this.saveQuestResponse(userId, {
+      await questService.saveQuestResponse(userId, {
         questId: questId,
         response: "A. Take deep breaths",
       });
 
       console.log("✅ Complete user profile created successfully!");
     } catch (error) {
-      this._logError(error, "Error creating complete profile");
+      _logError(error, "Error creating complete profile");
       throw error;
+    }
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      await firestore().collection("solo_spark_user").doc(userId).delete();
+      console.log("🗑️ User deleted successfully");
+    } catch (err) {
+      console.error("❌ Failed to delete user:", err);
+      throw err;
     }
   }
 }
 
-const firebaseService = new FirebaseService();
+const userService = new UserService();
 
-export default firebaseService;
+export default userService;

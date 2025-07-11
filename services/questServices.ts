@@ -1,0 +1,171 @@
+import { CreateQuestResponse, CreateQuest } from "./questServices.types";
+import firestore, {
+  FirebaseFirestoreTypes,
+} from "@react-native-firebase/firestore";
+import _logError from "@/utils/logErrors";
+import {
+  AnalyticsQuest,
+  AnalyticsQuestResponse,
+} from "./analyticsServices.types";
+
+class QuestService {
+  //   private _logError(error: unknown, message: string): void {
+  //     const errorMessage =
+  //       error instanceof Error ? error.message : "Unknown error";
+  //     const errorCode = (error as any)?.code || "Unknown";
+  //     const errorStack = error instanceof Error ? error.stack : "No stack trace";
+  //     console.error(`❌ ${message}:`, {
+  //       message: errorMessage,
+  //       code: errorCode,
+  //       stack: errorStack,
+  //       originalError: error,
+  //     });
+  //   }
+
+  private getCurrentUserId(userId?: string): string {
+    return userId || "seed-user-123";
+  }
+
+  private async fetchCollection<T>(
+    userId: string,
+    collectionPath: string,
+    orderBy?: { field: string; direction: "asc" | "desc" }
+  ): Promise<T[]> {
+    try {
+      const currentUserId = this.getCurrentUserId(userId);
+      if (!currentUserId) {
+        throw new Error("User not authenticated");
+      }
+
+      let query: FirebaseFirestoreTypes.Query = firestore().collection(
+        `solo_spark_user/${currentUserId}/${collectionPath}`
+      );
+
+      if (orderBy) {
+        query = query.orderBy(orderBy.field, orderBy.direction);
+      }
+
+      const snapshot = await query.get();
+      const items: T[] = [];
+      snapshot.forEach((doc) => {
+        items.push({ id: doc.id, ...doc.data() } as T);
+      });
+
+      console.log(`✅ Fetched ${items.length} items from ${collectionPath}`);
+      return items;
+    } catch (error) {
+      _logError(error, `Error fetching collection ${collectionPath}`);
+      throw error;
+    }
+  }
+
+  async saveQuestResponse(
+    userId: string,
+    responseData: CreateQuestResponse
+  ): Promise<string> {
+    try {
+      const currentUserId = this.getCurrentUserId(userId);
+
+      // Create quest response with proper structure
+      const responseWithTimestamp = {
+        questId: responseData.questId || "quest-123",
+        response: responseData.response || "Option A",
+        timestamp: firestore.FieldValue.serverTimestamp(),
+      };
+
+      const docRef = await firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .collection("QuestResponses")
+        .add(responseWithTimestamp);
+
+      console.log(
+        "✅ Real Firebase: Quest response saved successfully",
+        responseWithTimestamp
+      );
+      return docRef.id;
+    } catch (error) {
+      _logError(error, "Firebase Error in saveQuestResponse");
+      throw error;
+    }
+  }
+
+  async saveQuest(questData: CreateQuest): Promise<string> {
+    try {
+      // Basic runtime validation
+      if (
+        questData.pointValue === undefined ||
+        isNaN(questData.pointValue) ||
+        questData.pointValue <= 0
+      ) {
+        throw new Error("Point value must be a positive number.");
+      }
+      if (
+        !questData.options ||
+        questData.options.filter((opt) => opt.trim() !== "").length < 2
+      ) {
+        throw new Error("At least two non-empty options are required.");
+      }
+
+      // Create quest with proper structure
+      const questWithId = {
+        questionText: questData.questionText || "How are you feeling today?",
+        category: questData.category || "emotional intelligence",
+        options: questData.options || ["A. Happy", "B. Sad", "C. Neutral"],
+        pointValue: questData.pointValue || 10,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        responseOptions: questData.responseOptions || [],
+        responseCount: questData.responseCount || 0,
+      };
+
+      const docRef = await firestore()
+        .collection("solo_spark_quest")
+        .add(questWithId);
+
+      console.log("✅ Real Firebase: Quest saved successfully", questWithId);
+      return docRef.id;
+    } catch (error) {
+      _logError(error, "Firebase Error in saveQuest");
+      throw error;
+    }
+  }
+
+  async fetchQuestById(questId: string): Promise<AnalyticsQuest | null> {
+    try {
+      const questDoc = await firestore()
+        .collection("solo_spark_quest")
+        .doc(questId)
+        .get();
+
+      if (questDoc.exists()) {
+        const quest = {
+          id: questDoc.id,
+          ...questDoc.data(),
+        } as AnalyticsQuest;
+        console.log(`✅ Fetched quest: ${quest.questionText}`);
+        return quest;
+      } else {
+        console.log(`❌ AnalyticsQuest not found: ${questId}`);
+        return null;
+      }
+    } catch (error) {
+      _logError(error, "Error fetching quest");
+      throw error;
+    }
+  }
+
+  async fetchQuestResponses(userId: string): Promise<AnalyticsQuestResponse[]> {
+    return this.fetchCollection<AnalyticsQuestResponse>(
+      userId,
+      "QuestResponses",
+      {
+        field: "timestamp",
+        direction: "desc",
+      }
+    );
+  }
+}
+
+const questService = new QuestService();
+
+export default questService;

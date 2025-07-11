@@ -1,167 +1,39 @@
-import firestore, {
-  FirebaseFirestoreTypes,
-  where,
-} from "@react-native-firebase/firestore";
+import firestore, { where } from "@react-native-firebase/firestore";
 import type {
-  AnalyticsMoodEntry,
-  AnalyticsPersonalityTrait,
   AnalyticsQuest,
   AnalyticsQuestResponse,
   AnalyticsUserProfile,
-  MoodScore,
   PersonalityResponse,
   AnalysisResult,
   ResponsePatterns,
 } from "./analyticsServices.types";
-import type { PersonalityTrait, traitScore } from "../types/user.types";
-
+import _logError from "@/utils/logErrors";
 import {
   POSITIVE_KEYWORDS,
   NEGATIVE_KEYWORDS,
   EMOTIONAL_NEEDS_KEYWORDS,
   PERSONALITY_IMPACT_KEYWORDS,
 } from "@/constants/analyticsKeywords";
+import questService from "./questServices";
+import userService from "./userServices";
 
 class AnalyticsService {
   private getCurrentUserId(userId?: string): string {
     return userId || "seed-user-123";
   }
 
-  private _logError(error: unknown, message: string): void {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    const errorCode = (error as any)?.code || "Unknown";
-    const errorStack = error instanceof Error ? error.stack : "No stack trace";
-    console.error(`❌ ${message}:`, {
-      message: errorMessage,
-      code: errorCode,
-      stack: errorStack,
-      originalError: error,
-    });
-  }
-
-  // Fetch user profile
-  async fetchUserProfile(userId: string): Promise<AnalyticsUserProfile | null> {
-    try {
-      const currentUserId = this.getCurrentUserId(userId);
-      const userDoc = await firestore()
-        .collection("solo_spark_user")
-        .doc(currentUserId)
-        .get();
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as AnalyticsUserProfile;
-        console.log("✅ Fetched user profile");
-        return userData;
-      } else {
-        console.log("❌ User profile not found");
-        return null;
-      }
-    } catch (error) {
-      this._logError(error, "Error fetching user profile");
-      throw error;
-    }
-  }
-
-  private async fetchCollection<T>(
-    userId: string,
-    collectionPath: string,
-    orderBy?: { field: string; direction: "asc" | "desc" }
-  ): Promise<T[]> {
-    try {
-      const currentUserId = this.getCurrentUserId(userId);
-      if (!currentUserId) {
-        throw new Error("User not authenticated");
-      }
-
-      let query: FirebaseFirestoreTypes.Query = firestore().collection(
-        `solo_spark_user/${currentUserId}/${collectionPath}`
-      );
-
-      if (orderBy) {
-        query = query.orderBy(orderBy.field, orderBy.direction);
-      }
-
-      const snapshot = await query.get();
-      const items: T[] = [];
-      snapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() } as T);
-      });
-
-      console.log(`✅ Fetched ${items.length} items from ${collectionPath}`);
-      return items;
-    } catch (error) {
-      this._logError(error, `Error fetching collection ${collectionPath}`);
-      throw error;
-    }
-  }
-
-  // Fetch all personality traits for a user
-  async fetchPersonalityTraits(
-    userId: string
-  ): Promise<AnalyticsPersonalityTrait[]> {
-    const rawTraits = await this.fetchCollection<
-      PersonalityTrait & {
-        id: string;
-        timestamp: FirebaseFirestoreTypes.Timestamp;
-      }
-    >(userId, "PersonalityTraits", { field: "timestamp", direction: "desc" });
-
-    // Map raw traits (with traitScore) to AnalyticsPersonalityTrait (with numbers)
-    return rawTraits.map((trait) => ({
-      id: trait.id,
-      openness: trait.openness.value * trait.openness.weight * 10, // Scale 0-1 to 1-10
-      neuroticism: trait.neuroticism.value * trait.neuroticism.weight * 10, // Scale 0-1 to 1-10
-      agreeableness:
-        trait.agreeableness.value * trait.agreeableness.weight * 10, // Scale 0-1 to 1-10
-      timestamp: trait.timestamp,
-    }));
-  }
-
-  // Fetch all mood entries for a user
-  async fetchMoodEntries(userId: string): Promise<AnalyticsMoodEntry[]> {
-    return this.fetchCollection<AnalyticsMoodEntry>(userId, "MoodHistory", {
-      field: "timestamp",
-      direction: "desc",
-    });
-  }
-
-  // Fetch all quest responses for a user
-  async fetchQuestResponses(userId: string): Promise<AnalyticsQuestResponse[]> {
-    return this.fetchCollection<AnalyticsQuestResponse>(
-      userId,
-      "QuestResponses",
-      {
-        field: "timestamp",
-        direction: "desc",
-      }
-    );
-  }
-
-  // Fetch quest details by ID
-  async fetchQuestById(questId: string): Promise<AnalyticsQuest | null> {
-    try {
-      const questDoc = await firestore()
-        .collection("solo_spark_quest")
-        .doc(questId)
-        .get();
-
-      if (questDoc.exists()) {
-        const quest = {
-          id: questDoc.id,
-          ...questDoc.data(),
-        } as AnalyticsQuest;
-        console.log(`✅ Fetched quest: ${quest.questionText}`);
-        return quest;
-      } else {
-        console.log(`❌ AnalyticsQuest not found: ${questId}`);
-        return null;
-      }
-    } catch (error) {
-      this._logError(error, "Error fetching quest");
-      throw error;
-    }
-  }
+  // private _logError(error: unknown, message: string): void {
+  //   const errorMessage =
+  //     error instanceof Error ? error.message : "Unknown error";
+  //   const errorCode = (error as any)?.code || "Unknown";
+  //   const errorStack = error instanceof Error ? error.stack : "No stack trace";
+  //   console.error(`❌ ${message}:`, {
+  //     message: errorMessage,
+  //     code: errorCode,
+  //     stack: errorStack,
+  //     originalError: error,
+  //   });
+  // }
 
   // Comprehensive analysis of quest responses and update user schema
   async analyzeAndUpdateUserSchema(userId: string): Promise<{
@@ -174,8 +46,8 @@ class AnalyticsService {
       console.log("🔄 Starting comprehensive user schema analysis...");
 
       const [responses, userProfile] = await Promise.all([
-        this.fetchQuestResponses(userId),
-        this.fetchUserProfile(userId),
+        questService.fetchQuestResponses(userId),
+        userService.fetchUserProfile(userId),
       ]);
 
       if (!userProfile) {
@@ -256,7 +128,7 @@ class AnalyticsService {
       console.log("✅ User schema analysis completed:", results);
       return results;
     } catch (error) {
-      this._logError(error, "Error in user schema analysis");
+      _logError(error, "Error in user schema analysis");
       throw error;
     }
   }
@@ -346,7 +218,7 @@ class AnalyticsService {
     changes: PersonalityResponse
   ): Promise<void> {
     try {
-      const currentTraits = await this.fetchPersonalityTraits(userId);
+      const currentTraits = await userService.fetchPersonalityTraits(userId);
       const latestTrait = currentTraits[0] || {
         openness: 5,
         neuroticism: 5,
@@ -385,7 +257,7 @@ class AnalyticsService {
         agreeableness: newAgreeableness,
       });
     } catch (error) {
-      this._logError(error, "Error updating personality traits");
+      _logError(error, "Error updating personality traits");
       throw error;
     }
   }
@@ -415,7 +287,7 @@ class AnalyticsService {
 
       console.log("✅ User mood updated:", newMood);
     } catch (error) {
-      this._logError(error, "Error updating user mood");
+      _logError(error, "Error updating user mood");
       throw error;
     }
   }
@@ -437,7 +309,7 @@ class AnalyticsService {
 
       console.log("✅ Emotional needs updated:", newNeeds);
     } catch (error) {
-      this._logError(error, "Error updating emotional needs");
+      _logError(error, "Error updating emotional needs");
       throw error;
     }
   }
@@ -459,7 +331,7 @@ class AnalyticsService {
 
       console.log("✅ Compatibility score updated:", newScore);
     } catch (error) {
-      this._logError(error, "Error updating compatibility score");
+      _logError(error, "Error updating compatibility score");
       throw error;
     }
   }
@@ -644,10 +516,10 @@ class AnalyticsService {
   }> {
     try {
       const [responses, traits, moods, userProfile] = await Promise.all([
-        this.fetchQuestResponses(userId),
-        this.fetchPersonalityTraits(userId),
-        this.fetchMoodEntries(userId),
-        this.fetchUserProfile(userId),
+        questService.fetchQuestResponses(userId),
+        userService.fetchPersonalityTraits(userId),
+        userService.fetchMoodEntries(userId),
+        userService.fetchUserProfile(userId),
       ]);
 
       // Calculate average personality traits
@@ -725,7 +597,7 @@ class AnalyticsService {
         userProfile,
       };
     } catch (error) {
-      this._logError(error, "Error getting comprehensive analytics");
+      _logError(error, "Error getting comprehensive analytics");
       throw error;
     }
   }

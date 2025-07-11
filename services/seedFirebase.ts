@@ -1,4 +1,5 @@
-import firebaseService from "./firebaseServices";
+import userService from "./userServices";
+import questService from "./questServices";
 import analyticsService from "./analyticsServices";
 import firestore from "@react-native-firebase/firestore";
 
@@ -9,8 +10,8 @@ async function seedFirebase() {
     const dummyUserId = "seed-user-123"; // Use a consistent dummy ID for seeding
 
     // --- Seed initial user data ---
-    // Note: firebaseService.saveUserProfile handles the timestamp and default values
-    await firebaseService.saveUserProfile(dummyUserId, {
+    // Note: userService.saveUserProfile handles the timestamp and default values
+    await userService.saveUserProfile(dummyUserId, {
       email: "seed@example.com",
       displayName: "Seed User",
       compatibilityScore: 75,
@@ -23,44 +24,44 @@ async function seedFirebase() {
     });
 
     // --- Seed personality traits ---
-    // firebaseService.savePersonalityTrait adds the timestamp
-    await firebaseService.savePersonalityTrait(dummyUserId, {
+    // userService.savePersonalityTrait adds the timestamp
+    await userService.savePersonalityTrait(dummyUserId, {
       openness: { value: 0.7, weight: 1 },
       neuroticism: { value: 0.4, weight: 1 },
       agreeableness: { value: 0.8, weight: 1 },
     });
 
     // --- Seed mood entries ---
-    // firebaseService.saveMoodEntry adds the timestamp
-    await firebaseService.saveMoodEntry(dummyUserId, {
+    // userService.saveMoodEntry adds the timestamp
+    await userService.saveMoodEntry(dummyUserId, {
       state: "Happy",
       intensity: 8,
       trigger: "Sunny weather",
     });
 
-    await firebaseService.saveMoodEntry(dummyUserId, {
+    await userService.saveMoodEntry(dummyUserId, {
       state: "Relaxed",
       intensity: 7,
       trigger: "Reading a book",
     });
 
     // --- Seed points transactions ---
-    // firebaseService.savePointsTransaction adds the timestamp and updates user's currentPoints
-    await firebaseService.savePointsTransaction(dummyUserId, {
+    // userService.savePointsTransaction adds the timestamp and updates user's currentPoints
+    await userService.savePointsTransaction(dummyUserId, {
       amount: 100,
       type: "earned",
       reason: "Initial bonus",
     });
 
-    await firebaseService.savePointsTransaction(dummyUserId, {
+    await userService.savePointsTransaction(dummyUserId, {
       amount: 50,
       type: "earned",
       reason: "Completed onboarding quest",
     });
 
     // --- Seed quests ---
-    // firebaseService.saveQuest adds the createdAt timestamp
-    const quest1Id = await firebaseService.saveQuest({
+    // questService.saveQuest adds the createdAt timestamp
+    const quest1Id = await questService.saveQuest({
       questionText: "What makes you feel most alive?",
       category: "self-reflection",
       options: ["Nature", "Art", "Helping others", "Learning something new"],
@@ -74,7 +75,7 @@ async function seedFirebase() {
       responseCount: 0,
     });
 
-    const quest2Id = await firebaseService.saveQuest({
+    const quest2Id = await questService.saveQuest({
       questionText: "How do you handle stress?",
       category: "emotional intelligence",
       options: [
@@ -93,7 +94,7 @@ async function seedFirebase() {
       responseCount: 0,
     });
 
-    const quest3Id = await firebaseService.saveQuest({
+    const quest3Id = await questService.saveQuest({
       questionText: "Describe a time you felt truly happy.",
       category: "emotional well-being",
       options: [
@@ -112,7 +113,7 @@ async function seedFirebase() {
       responseCount: 0,
     });
 
-    const quest4Id = await firebaseService.saveQuest({
+    const quest4Id = await questService.saveQuest({
       questionText: "What is one thing you're grateful for today?",
       category: "gratitude",
       options: [
@@ -132,43 +133,43 @@ async function seedFirebase() {
     });
 
     // --- Seed quest responses ---
-    // firebaseService.saveQuestResponse adds the timestamp
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    // questService.saveQuestResponse adds the timestamp
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest1Id,
       response: "Nature",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest2Id,
       response: "Meditation",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest3Id,
       response: "Achieving a goal",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest4Id,
       response: "My family/friends",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest1Id,
       response: "Learning something new",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest2Id,
       response: "Talking to a friend",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest3Id,
       response: "Experiencing something new",
     });
 
-    await firebaseService.saveQuestResponse(dummyUserId, {
+    await questService.saveQuestResponse(dummyUserId, {
       questId: quest4Id,
       response: "A simple pleasure",
     });
