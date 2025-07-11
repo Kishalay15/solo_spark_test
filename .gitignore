@@ -42,3 +42,5 @@ android/
 google-services.json
 
 nativewind-env.d.ts
+
+sample/
