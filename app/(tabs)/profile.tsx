@@ -16,34 +16,60 @@ const ProfileScreen = () => {
   const dummyUserId = "seed-user-123"; // Use the same dummy ID as in seedFirebase.ts
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profile = await userService.fetchUserProfile(dummyUserId);
-        const metricsDoc = await firestore()
-          .collection("solo_spark_user")
-          .doc(dummyUserId)
-          .collection("metrics")
-          .doc("summary")
-          .get();
+    const currentUserId = dummyUserId; // Use the consistent dummy ID
 
-        if (profile) {
-          setUserProfile(profile);
+    if (!currentUserId) {
+      setError("User not authenticated.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    // Listener for main user profile
+    const userProfileRef = firestore().collection("solo_spark_user").doc(currentUserId);
+    const unsubscribeUserProfile = userProfileRef.onSnapshot(
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          setUserProfile(docSnapshot.data() as AnalyticsUserProfile);
         } else {
+          setUserProfile(null);
           setError("User profile not found.");
         }
-
-        if (metricsDoc.exists()) {
-          setUserMetrics(metricsDoc.data() as Metrics);
-        }
-      } catch (err) {
-        console.error("Error fetching user profile or metrics:", err);
-        setError("Failed to load user profile or metrics.");
-      } finally {
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Error fetching user profile:", err);
+        setError("Failed to load user profile.");
         setLoading(false);
       }
-    };
+    );
 
-    fetchProfile();
+    // Listener for user metrics subcollection
+    const userMetricsRef = firestore()
+      .collection("solo_spark_user")
+      .doc(currentUserId)
+      .collection("metrics")
+      .doc("summary");
+    const unsubscribeUserMetrics = userMetricsRef.onSnapshot(
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          setUserMetrics(docSnapshot.data() as Metrics);
+        } else {
+          setUserMetrics(null);
+        }
+      },
+      (err) => {
+        console.error("Error fetching user metrics:", err);
+        // Don't set global error for metrics, as profile might still be valid
+      }
+    );
+
+    // Unsubscribe from listeners when component unmounts
+    return () => {
+      unsubscribeUserProfile();
+      unsubscribeUserMetrics();
+    };
   }, []);
 
   if (loading) {
