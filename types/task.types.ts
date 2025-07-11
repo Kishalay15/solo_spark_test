@@ -55,28 +55,14 @@ export interface UpdatedUserForTask {
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
 
-  emotionalProfile: {
-    currentMood: string;
-    moodStabilityScore: number;
-    emotionalNeeds: string[];
-  };
-
-  //tasks will target this and change this
-  personalityTraits: {
-    openness: number;
-    neuroticism: number;
-    agreeableness: number;
-  };
-
   //will store number of tasks from same category, thus propting our app to provide tasks of similar category over time
   categoryAffinity: {
-    [category: string]: number; // e.g., "growth": 4
+    [category: string]: number; // e.g., {growth: 4, health: 10,}
   };
 
-  //this measures overall attribute (might be an overhead and not needed)
+  //this measures overall attribute (might be an overhead or not needed) -> up for discussion
   engagementProfile: {
     interactionFrequency: number;
     completedQuests: string[];
   };
 }
-
