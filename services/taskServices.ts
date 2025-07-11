@@ -2,6 +2,7 @@ import firestore from "@react-native-firebase/firestore";
 import { CreateTask, UpdateTask } from "./taskServices.types";
 import { Task } from "../types/task.types";
 import { Metrics } from "../types/user.types";
+import analyticsService from "./analyticsServices";
 
 class TaskService {
   private tasksRef = firestore().collection("solo_spark_tasks");
@@ -84,6 +85,18 @@ class TaskService {
               "✅ Initial user metrics created successfully after task completion"
             );
           }
+
+          // Update user's currentPoints in the main user document
+          const userRef = firestore().collection("solo_spark_user").doc(userId);
+          const taskPoints = taskData.pointValue || 0; // Assuming task has a pointValue field
+          await userRef.update({
+            currentPoints: firestore.FieldValue.increment(taskPoints),
+            lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+          });
+          console.log(`✅ User currentPoints updated by ${taskPoints} after task completion`);
+
+          // Run analytics to update mood and other derived metrics
+          await analyticsService.analyzeAndUpdateUserSchema(userId);
         }
       }
 

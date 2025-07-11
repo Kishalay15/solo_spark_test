@@ -8,6 +8,7 @@ import {
   AnalyticsQuestResponse,
 } from "./analyticsServices.types";
 import { Metrics } from "../types/user.types";
+import analyticsService from "./analyticsServices";
 
 class QuestService {
   private getCurrentUserId(userId?: string): string {
@@ -72,6 +73,18 @@ class QuestService {
         responseWithTimestamp
       );
 
+      // Fetch quest details to get pointValue
+      const completedQuest = await this.fetchQuestById(responseData.questId || "quest-123");
+      const pointsEarned = completedQuest?.pointValue || 0;
+
+      // Update user's currentPoints and compatibilityScore in the main user document
+      const userRef = firestore().collection("solo_spark_user").doc(currentUserId);
+      await userRef.update({
+        currentPoints: firestore.FieldValue.increment(pointsEarned),
+        lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`✅ User currentPoints updated by ${pointsEarned}`);
+
       // Update user metrics
       const metricsRef = firestore()
         .collection("solo_spark_user")
@@ -110,6 +123,9 @@ class QuestService {
         await metricsRef.set(initialMetrics);
         console.log("✅ Initial user metrics created successfully");
       }
+
+      // Run analytics to update mood and other derived metrics
+      await analyticsService.analyzeAndUpdateUserSchema(currentUserId);
 
       return docRef.id;
     } catch (error) {

@@ -132,6 +132,27 @@ async function seedFirebase() {
       responseCount: 0,
     });
 
+    const quest5Id = await questService.saveQuest({
+      questionText: "What is your favorite way to relax?",
+      category: "well-being",
+      options: [
+        "Reading",
+        "Listening to music",
+        "Walking in nature",
+        "Playing games",
+      ],
+      pointValue: 12,
+      responseOptions: [
+        "Reading",
+        "Listening to music",
+        "Walking in nature",
+        "Playing games",
+      ],
+      responseCount: 0,
+    });
+
+    console.log("New Quest 5 ID:", quest5Id);
+
     // --- Seed quest responses ---
     // questService.saveQuestResponse adds the timestamp
     await questService.saveQuestResponse(dummyUserId, {
