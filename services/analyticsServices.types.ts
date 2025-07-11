@@ -1,5 +1,6 @@
 import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
+// ✅ Personality Trait Tracking
 export interface AnalyticsPersonalityTrait {
   id: string;
   openness: number;
@@ -8,6 +9,7 @@ export interface AnalyticsPersonalityTrait {
   timestamp: FirebaseFirestoreTypes.Timestamp;
 }
 
+// ✅ Mood Entry Logging
 export interface AnalyticsMoodEntry {
   id: string;
   mood: string;
@@ -15,6 +17,7 @@ export interface AnalyticsMoodEntry {
   timestamp: FirebaseFirestoreTypes.Timestamp;
 }
 
+// ✅ Quest Responses
 export interface AnalyticsQuestResponse {
   id: string;
   questId: string;
@@ -22,6 +25,7 @@ export interface AnalyticsQuestResponse {
   timestamp: FirebaseFirestoreTypes.Timestamp;
 }
 
+// ✅ Quest Metadata
 export interface AnalyticsQuest {
   id: string;
   questionText: string;
@@ -30,6 +34,7 @@ export interface AnalyticsQuest {
   pointValue: number;
 }
 
+// ✅ 🔥 Boss-Required: User Profile Analytics
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
@@ -46,22 +51,26 @@ export interface AnalyticsUserProfile {
   };
 }
 
+// ✅ Aggregated Personality Result
 export interface PersonalityResponse {
   openness: number;
   neuroticism: number;
   agreeableness: number;
 }
 
+// ✅ Mood Score Summary
 export interface MoodScore {
   positive: number;
   negative: number;
   neutral: number;
 }
 
+// ✅ Patterned Quest Responses
 export type ResponsePatterns = {
   [key: string]: number;
 };
 
+// ✅ Final Analysis Result
 export interface AnalysisResult {
   personalityChanges: PersonalityResponse;
   moodTrend: string;
