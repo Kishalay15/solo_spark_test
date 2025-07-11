@@ -1,6 +1,12 @@
 import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
-export type Task = {
+export type SubTask = {
+  title: string;
+  completed: boolean;
+  pointValue?: number;
+};
+
+export type CreateTask = {
   title: string;
   description: string;
   category: "growth" | "social" | "self-care" | "learning" | "habit" | "custom";
@@ -10,10 +16,7 @@ export type Task = {
     timelyResponse?: number;
     socialInteraction?: number;
   };
-  createdAt: FirebaseFirestoreTypes.Timestamp;
   dueDate?: FirebaseFirestoreTypes.Timestamp;
-  completed: boolean;
-  completedAt?: FirebaseFirestoreTypes.Timestamp;
   rules: {
     dailyCheckIn?: boolean;
     moodStabilityReward?: boolean;
@@ -30,7 +33,6 @@ export type Task = {
   assignedBy?: string;
   dependencies?: string[];
   subTasks?: SubTask[];
-  //up for discussion
   personalityImpact?: {
     openness?: number;
     neuroticism?: number;
@@ -38,8 +40,25 @@ export type Task = {
   };
 };
 
-export type SubTask = {
-  title: string;
-  completed: boolean;
-  pointValue?: number;
+export type UpdateTask = Partial<CreateTask> & {
+  completed?: boolean;
+  completedAt?: FirebaseFirestoreTypes.Timestamp;
 };
+
+export interface UpdatedUserForTask {
+  email: string;
+  displayName: string;
+  compatibilityScore: number;
+  currentPoints: number;
+  privacyLevel: string;
+  phoneNumber?: string;
+  profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
+  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
+  categoryAffinity: {
+    [category: string]: number;
+  };
+  engagementProfile: {
+    interactionFrequency: number;
+    completedQuests: string[];
+  };
+}

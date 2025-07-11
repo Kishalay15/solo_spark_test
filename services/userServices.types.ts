@@ -3,14 +3,12 @@ export interface User {
   email: string;
   displayName: string;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
-  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   compatibilityScore: number;
   currentPoints: number;
+  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   privacyLevel: "private" | "friends" | "public";
   phoneNumber: string;
   emotionalProfile?: {
-    currentMood: string;
-    moodFrequency: string;
     emotionalNeeds: string[];
   };
 }
@@ -57,6 +55,21 @@ export type CreateUser = Partial<
 >;
 export type CreatePersonalityTrait = Partial<PersonalityTrait>;
 export type CreateMoodState = Partial<Omit<MoodState, "timestamp">>;
+export interface Metrics {
+  categoryAffinity: {
+    growth: number;
+    social: number;
+  };
+  engagementProfile: {
+    interactionFrequency: number;
+    completedQuests: string[];
+  };
+  emotionalProfileMetrics: {
+    currentMood: string;
+    moodFrequency: string;
+  };
+}
+
 export type CreatePointsTransaction = Partial<
   Omit<PointsTransaction, "timestamp">
 >;

@@ -33,15 +33,13 @@ export interface AnalyticsQuest {
 export interface AnalyticsUserProfile {
   email: string;
   displayName: string;
-  compatibilityScore: number;
-  currentPoints: number;
   privacyLevel: string;
   phoneNumber?: string;
+  compatibilityScore: number;
+  currentPoints: number;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   emotionalProfile: {
-    currentMood: string;
-    moodFrequency: string;
     emotionalNeeds: string[];
   };
 }
@@ -61,6 +59,21 @@ export interface MoodScore {
 export type ResponsePatterns = {
   [key: string]: number;
 };
+
+export interface Metrics {
+  categoryAffinity: {
+    growth: number;
+    social: number;
+  };
+  engagementProfile: {
+    interactionFrequency: number;
+    completedQuests: string[];
+  };
+  emotionalProfileMetrics: {
+    currentMood: string;
+    moodFrequency: string;
+  };
+}
 
 export interface AnalysisResult {
   personalityChanges: PersonalityResponse;

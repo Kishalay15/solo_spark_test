@@ -5,14 +5,10 @@ export interface User {
   displayName: string;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
   lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
-  compatibilityScore: number;
-  currentPoints: number;
   privacyLevel: "private" | "friends" | "public";
   phoneNumber: string;
   emotionalProfile?: {
-    currentMood: string;
-    moodFrequency: string;
-    emotionalNeeds: string;
+    emotionalNeeds: string[];
   };
 }
 
@@ -60,6 +56,21 @@ export interface PointsTransaction {
   reason: string;
   timestamp: FirebaseFirestoreTypes.Timestamp;
   expiryDate?: FirebaseFirestoreTypes.Timestamp;
+}
+
+export interface Metrics {
+  categoryAffinity: {
+    growth: number;
+    social: number;
+  };
+  engagementProfile: {
+    interactionFrequency: number;
+    completedQuests: string[];
+  };
+  emotionalProfileMetrics: {
+    currentMood: string;
+    moodFrequency: string;
+  };
 }
 
 export interface QuestResponse {
