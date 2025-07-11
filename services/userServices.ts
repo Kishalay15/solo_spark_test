@@ -436,12 +436,45 @@ class UserService {
     }
   }
 
-  async deleteUser(userId: string): Promise<void> {
+  private async _deleteCollection(
+    collectionRef: FirebaseFirestoreTypes.CollectionReference
+  ): Promise<void> {
+    const snapshot = await collectionRef.get();
+    if (snapshot.empty) {
+      return;
+    }
+
+    const batch = firestore().batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+  }
+
+  async _deleteUser(userId: string): Promise<void> {
     try {
-      await firestore().collection("solo_spark_user").doc(userId).delete();
-      console.log("🗑️ User deleted successfully");
+      const currentUserId = this.getCurrentUserId(userId);
+      const userRef = firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId);
+      const subcollections = [
+        "PersonalityTraits",
+        "MoodHistory",
+        "PointsTransactions",
+        "QuestResponses",
+      ];
+
+      for (const subcollection of subcollections) {
+        const subcollectionRef = userRef.collection(subcollection);
+        await this._deleteCollection(subcollectionRef);
+        console.log(`🗑️ Subcollection ${subcollection} deleted successfully`);
+      }
+
+      await userRef.delete();
+      console.log("🗑️ User document deleted successfully");
     } catch (err) {
-      console.error("❌ Failed to delete user:", err);
+      _logError(err, "Failed to delete user");
       throw err;
     }
   }

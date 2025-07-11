@@ -11,7 +11,7 @@ export interface User {
   emotionalProfile?: {
     currentMood: string;
     moodFrequency: string;
-    emotionalNeeds: string;
+    emotionalNeeds: string[];
   };
 }
 
@@ -52,8 +52,6 @@ export interface QuestResponse {
   timestamp: FirebaseFirestoreTypes.Timestamp;
 }
 
-
-
 export type CreateUser = Partial<
   Omit<User, "profileCreatedAt" | "lastUpdatedAt">
 >;
@@ -62,4 +60,3 @@ export type CreateMoodState = Partial<Omit<MoodState, "timestamp">>;
 export type CreatePointsTransaction = Partial<
   Omit<PointsTransaction, "timestamp">
 >;
-

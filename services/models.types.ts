@@ -22,7 +22,7 @@ export interface User {
   emotionalProfile?: {
     currentMood: string;
     moodFrequency: string;
-    emotionalNeeds: string;
+    emotionalNeeds: string[];
   };
 }
 
