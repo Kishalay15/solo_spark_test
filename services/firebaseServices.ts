@@ -55,7 +55,7 @@ class FirebaseService {
         emotionalProfile: userData.emotionalProfile || {
           currentMood: "Neutral",
           moodFrequency: "Stable",
-          emotionalNeeds: "Support",
+          emotionalNeeds: ["Support"],
         },
       };
 

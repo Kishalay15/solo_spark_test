@@ -38,11 +38,11 @@ export interface AnalyticsUserProfile {
   privacyLevel: string;
   phoneNumber?: string;
   profileCreatedAt: FirebaseFirestoreTypes.Timestamp;
-  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp; 
+  lastUpdatedAt: FirebaseFirestoreTypes.Timestamp;
   emotionalProfile: {
     currentMood: string;
     moodFrequency: string;
-    emotionalNeeds: string;
+    emotionalNeeds: string[];
   };
 }
 
@@ -66,6 +66,6 @@ export interface AnalysisResult {
   personalityChanges: PersonalityResponse;
   moodTrend: string;
   moodScores: MoodScore;
-  emotionalNeeds: string;
+  emotionalNeeds: string[];
   responsePatterns: ResponsePatterns;
 }

@@ -234,7 +234,13 @@ class AnalyticsService {
 
       // Update emotional needs
       if (
-        analysis.emotionalNeeds !== userProfile.emotionalProfile.emotionalNeeds
+        !userProfile.emotionalProfile.emotionalNeeds ||
+        analysis.emotionalNeeds.some(
+          (need) => !userProfile.emotionalProfile.emotionalNeeds.includes(need)
+        ) ||
+        userProfile.emotionalProfile.emotionalNeeds.some(
+          (need) => !analysis.emotionalNeeds.includes(need)
+        )
       ) {
         await this.updateEmotionalNeeds(userId, analysis.emotionalNeeds);
         results.emotionalNeedsUpdated = true;
@@ -318,16 +324,18 @@ class AnalyticsService {
     else if (moodScores.negative > moodScores.positive) moodTrend = "Negative";
 
     // Determine dominant emotional need
-    const dominantEmotionalNeed = Object.keys(emotionalNeedsPatterns).reduce(
-      (a, b) => (emotionalNeedsPatterns[a] > emotionalNeedsPatterns[b] ? a : b),
-      "Support"
+    const dominantEmotionalNeeds = Object.keys(emotionalNeedsPatterns).sort(
+      (a, b) => emotionalNeedsPatterns[b] - emotionalNeedsPatterns[a]
     );
 
     return {
       personalityChanges,
       moodTrend,
       moodScores,
-      emotionalNeeds: dominantEmotionalNeed,
+      emotionalNeeds:
+        dominantEmotionalNeeds.length > 0
+          ? dominantEmotionalNeeds
+          : ["Support"],
       responsePatterns,
     };
   }
@@ -415,7 +423,7 @@ class AnalyticsService {
   // Update emotional needs
   private async updateEmotionalNeeds(
     userId: string,
-    newNeeds: string
+    newNeeds: string[]
   ): Promise<void> {
     try {
       const currentUserId = this.getCurrentUserId(userId);
@@ -548,7 +556,7 @@ class AnalyticsService {
     const responseLower = response.toLowerCase();
 
     // Check for positive keywords (more sensitive)
-    for (const keyword of POSITIVE_KEYWORDS) {
+    for (const keyword of positiveKeywords) {
       if (responseLower.includes(keyword)) {
         console.log(
           "😊 Positive mood detected from keyword:",
@@ -561,7 +569,7 @@ class AnalyticsService {
     }
 
     // Check for negative keywords (more sensitive)
-    for (const keyword of NEGATIVE_KEYWORDS) {
+    for (const keyword of negativeKeywords) {
       if (responseLower.includes(keyword)) {
         console.log(
           "😞 Negative mood detected from keyword:",
@@ -628,7 +636,7 @@ class AnalyticsService {
       agreeableness: number;
     };
     moodTrend: string;
-    emotionalNeeds: string;
+    emotionalNeeds: string[];
     compatibilityScore: number;
     recentActivity: string;
     responsePatterns: ResponsePatterns;
@@ -661,8 +669,9 @@ class AnalyticsService {
       const moodTrend = moods.length > 0 ? moods[0].mood : "Unknown";
 
       // Get emotional needs
-      const emotionalNeeds =
-        userProfile?.emotionalProfile?.emotionalNeeds || "Unknown";
+      const emotionalNeeds = userProfile?.emotionalProfile?.emotionalNeeds || [
+        "Unknown",
+      ];
 
       // Get compatibility score
       const compatibilityScore = userProfile?.compatibilityScore || 50;
