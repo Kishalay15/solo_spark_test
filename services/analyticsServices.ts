@@ -16,26 +16,13 @@ import {
 } from "@/constants/analyticsKeywords";
 import questService from "./questServices";
 import userService from "./userServices";
+import { Metrics } from "../types/user.types";
 
 class AnalyticsService {
   private getCurrentUserId(userId?: string): string {
     return userId || "seed-user-123";
   }
 
-  // private _logError(error: unknown, message: string): void {
-  //   const errorMessage =
-  //     error instanceof Error ? error.message : "Unknown error";
-  //   const errorCode = (error as any)?.code || "Unknown";
-  //   const errorStack = error instanceof Error ? error.stack : "No stack trace";
-  //   console.error(`❌ ${message}:`, {
-  //     message: errorMessage,
-  //     code: errorCode,
-  //     stack: errorStack,
-  //     originalError: error,
-  //   });
-  // }
-
-  // Comprehensive analysis of quest responses and update user schema
   async analyzeAndUpdateUserSchema(userId: string): Promise<{
     personalityUpdated: boolean;
     moodUpdated: boolean;
@@ -45,10 +32,20 @@ class AnalyticsService {
     try {
       console.log("🔄 Starting comprehensive user schema analysis...");
 
-      const [responses, userProfile] = await Promise.all([
+      const [responses, userProfile, metricsDoc] = await Promise.all([
         questService.fetchQuestResponses(userId),
         userService.fetchUserProfile(userId),
+        firestore()
+          .collection("solo_spark_user")
+          .doc(userId)
+          .collection("metrics")
+          .doc("summary")
+          .get(),
       ]);
+
+      const metrics = metricsDoc.exists()
+        ? (metricsDoc.data() as Metrics)
+        : null;
 
       if (!userProfile) {
         throw new Error("User profile not found");
@@ -61,10 +58,8 @@ class AnalyticsService {
         compatibilityScoreUpdated: false,
       };
 
-      // Analyze responses and calculate updates
       const analysis = await this.analyzeQuestResponses(responses);
 
-      // Update personality traits
       if (
         analysis.personalityChanges.openness !== 0 ||
         analysis.personalityChanges.neuroticism !== 0 ||
@@ -74,37 +69,77 @@ class AnalyticsService {
         results.personalityUpdated = true;
       }
 
-      // Update mood with better logic and debugging
       console.log("🔍 Mood analysis:", {
-        currentMood: userProfile.emotionalProfile.currentMood,
+        currentMood: metrics?.emotionalProfileMetrics?.currentMood || "Unknown",
         newMoodTrend: analysis.moodTrend,
         moodScores: analysis.moodScores,
       });
 
-      // More aggressive mood update logic
       const shouldUpdateMood =
-        analysis.moodTrend !== userProfile.emotionalProfile.currentMood ||
+        analysis.moodTrend !==
+          (metrics?.emotionalProfileMetrics?.currentMood || "Unknown") ||
         analysis.moodScores.positive > 0 ||
         analysis.moodScores.negative > 0 ||
         (analysis.moodTrend === "Positive" &&
-          userProfile.emotionalProfile.currentMood !== "Positive") ||
+          (metrics?.emotionalProfileMetrics?.currentMood || "Unknown") !==
+            "Positive") ||
         (analysis.moodTrend === "Negative" &&
-          userProfile.emotionalProfile.currentMood !== "Negative");
+          (metrics?.emotionalProfileMetrics?.currentMood || "Unknown") !==
+            "Negative");
 
       if (shouldUpdateMood) {
         await this.updateUserMood(userId, analysis.moodTrend);
         results.moodUpdated = true;
         console.log(
           "✅ Mood updated from",
-          userProfile.emotionalProfile.currentMood,
+          metrics?.emotionalProfileMetrics?.currentMood || "Unknown",
           "to",
           analysis.moodTrend
         );
+
+        // Update metrics/summary with emotionalProfileMetrics
+        const metricsRef = firestore()
+          .collection("solo_spark_user")
+          .doc(userId)
+          .collection("metrics")
+          .doc("summary");
+
+        const metricsDoc = await metricsRef.get();
+
+        if (metricsDoc.exists()) {
+          const currentMetrics = metricsDoc.data() as Metrics;
+          const updatedMetrics: Metrics = {
+            ...currentMetrics,
+            emotionalProfileMetrics: {
+              currentMood: analysis.moodTrend,
+              moodFrequency: "Stable",
+            },
+          };
+          await metricsRef.update(updatedMetrics);
+          console.log(
+            "✅ Metrics emotionalProfileMetrics updated successfully"
+          );
+        } else {
+          const initialMetrics: Metrics = {
+            categoryAffinity: { growth: 0, social: 0 },
+            engagementProfile: {
+              interactionFrequency: 0,
+              completedQuests: [],
+            },
+            emotionalProfileMetrics: {
+              currentMood: analysis.moodTrend,
+              moodFrequency: "Stable", // Placeholder
+            },
+          };
+          await metricsRef.set(initialMetrics);
+          console.log(
+            "✅ Initial metrics document created with emotionalProfileMetrics"
+          );
+        }
       } else {
         console.log("⏭️ Mood not updated - no significant change detected");
       }
 
-      // Update emotional needs
       if (
         !userProfile.emotionalProfile.emotionalNeeds ||
         analysis.emotionalNeeds.some(
@@ -269,9 +304,10 @@ class AnalyticsService {
       await firestore()
         .collection("solo_spark_user")
         .doc(currentUserId)
+        .collection("metrics")
+        .doc("summary")
         .update({
-          "emotionalProfile.currentMood": newMood,
-          lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+          "emotionalProfileMetrics.currentMood": newMood,
         });
 
       // Also add to mood history
@@ -515,12 +551,23 @@ class AnalyticsService {
     userProfile: AnalyticsUserProfile | null;
   }> {
     try {
-      const [responses, traits, moods, userProfile] = await Promise.all([
-        questService.fetchQuestResponses(userId),
-        userService.fetchPersonalityTraits(userId),
-        userService.fetchMoodEntries(userId),
-        userService.fetchUserProfile(userId),
-      ]);
+      const [responses, traits, moods, userProfile, metricsDoc] =
+        await Promise.all([
+          questService.fetchQuestResponses(userId),
+          userService.fetchPersonalityTraits(userId),
+          userService.fetchMoodEntries(userId),
+          userService.fetchUserProfile(userId),
+          firestore()
+            .collection("solo_spark_user")
+            .doc(userId)
+            .collection("metrics")
+            .doc("summary")
+            .get(),
+        ]);
+
+      const metrics = metricsDoc.exists()
+        ? (metricsDoc.data() as Metrics)
+        : null;
 
       // Calculate average personality traits
       const avgPersonality =
@@ -537,8 +584,10 @@ class AnalyticsService {
             }
           : { openness: 5, neuroticism: 5, agreeableness: 5 };
 
-      // Get mood trend
-      const moodTrend = moods.length > 0 ? moods[0].mood : "Unknown";
+      // Get mood trend from metrics, fallback to moods history if not available
+      const moodTrend =
+        metrics?.emotionalProfileMetrics?.currentMood ||
+        (moods.length > 0 ? moods[0].mood : "Unknown");
 
       // Get emotional needs
       const emotionalNeeds = userProfile?.emotionalProfile?.emotionalNeeds || [

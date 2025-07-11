@@ -7,21 +7,9 @@ import {
   AnalyticsQuest,
   AnalyticsQuestResponse,
 } from "./analyticsServices.types";
+import { Metrics } from "../types/user.types";
 
 class QuestService {
-  //   private _logError(error: unknown, message: string): void {
-  //     const errorMessage =
-  //       error instanceof Error ? error.message : "Unknown error";
-  //     const errorCode = (error as any)?.code || "Unknown";
-  //     const errorStack = error instanceof Error ? error.stack : "No stack trace";
-  //     console.error(`❌ ${message}:`, {
-  //       message: errorMessage,
-  //       code: errorCode,
-  //       stack: errorStack,
-  //       originalError: error,
-  //     });
-  //   }
-
   private getCurrentUserId(userId?: string): string {
     return userId || "seed-user-123";
   }
@@ -83,6 +71,46 @@ class QuestService {
         "✅ Real Firebase: Quest response saved successfully",
         responseWithTimestamp
       );
+
+      // Update user metrics
+      const metricsRef = firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId)
+        .collection("metrics")
+        .doc("summary");
+
+      const metricsDoc = await metricsRef.get();
+
+      if (metricsDoc.exists()) {
+        const currentMetrics = metricsDoc.data() as Metrics;
+        const updatedMetrics: Metrics = {
+          ...currentMetrics,
+          engagementProfile: {
+            ...currentMetrics.engagementProfile,
+            interactionFrequency:
+              currentMetrics.engagementProfile.interactionFrequency + 1,
+            completedQuests: [
+              ...currentMetrics.engagementProfile.completedQuests,
+              responseData.questId || "quest-123",
+            ],
+          },
+        };
+        await metricsRef.update(updatedMetrics);
+        console.log("✅ User metrics updated successfully");
+      } else {
+        // Create initial metrics document if it doesn't exist
+        const initialMetrics: Metrics = {
+          categoryAffinity: { growth: 0, social: 0 },
+          engagementProfile: {
+            interactionFrequency: 1,
+            completedQuests: [responseData.questId || "quest-123"],
+          },
+          emotionalProfileMetrics: { currentMood: "", moodFrequency: "" },
+        };
+        await metricsRef.set(initialMetrics);
+        console.log("✅ Initial user metrics created successfully");
+      }
+
       return docRef.id;
     } catch (error) {
       _logError(error, "Firebase Error in saveQuestResponse");

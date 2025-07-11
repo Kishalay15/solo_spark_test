@@ -463,6 +463,7 @@ class UserService {
         "MoodHistory",
         "PointsTransactions",
         "QuestResponses",
+        "Metrics",
       ];
 
       for (const subcollection of subcollections) {
