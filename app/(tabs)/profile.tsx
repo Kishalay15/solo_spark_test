@@ -131,6 +131,9 @@ const ProfileScreen = () => {
         </Text>
       </View>
       <View className="bg-white rounded-lg p-4 mb-3 shadow-md">
+        <Text className="text-base font-semibold text-gray-600 mb-1">
+          Profile Updated At:
+        </Text>
         <Text className="text-base text-gray-800">
           {userProfile.lastUpdatedAt?.toDate().toLocaleString() || "N/A"}
         </Text>
