@@ -1,7 +1,7 @@
 import userService from "./userServices";
 import questService from "./questServices";
 import analyticsService from "./analyticsServices";
-import firestore from "@react-native-firebase/firestore";
+import taskService from "./taskServices";
 
 async function seedFirebase() {
   try {
@@ -152,6 +152,66 @@ async function seedFirebase() {
     });
 
     console.log("New Quest 5 ID:", quest5Id);
+
+    // --- Seed tasks ---
+    console.log("Adding uncompleted tasks...");
+    await taskService.createTask({
+      title: "Daily Meditation",
+      description: "Meditate for 10 minutes using a guided app.",
+      category: "self-care",
+      pointValue: 10,
+      rules: { dailyCheckIn: true },
+      userId: dummyUserId,
+      difficulty: "easy",
+      tags: ["mindfulness", "daily"],
+    });
+
+    await taskService.createTask({
+      title: "Read a Chapter",
+      description: "Read one chapter of a non-fiction book.",
+      category: "learning",
+      pointValue: 15,
+      rules: { dailyCheckIn: false },
+      userId: dummyUserId,
+      difficulty: "medium",
+      tags: ["reading", "education"],
+    });
+
+    await taskService.createTask({
+      title: "Connect with a Friend",
+      description: "Call or text a friend you haven't spoken to recently.",
+      category: "social",
+      pointValue: 20,
+      rules: { dailyCheckIn: false },
+      userId: dummyUserId,
+      difficulty: "easy",
+      tags: ["social", "connection"],
+    });
+
+    await taskService.createTask({
+      title: "Plan Tomorrow's Goals",
+      description: "Spend 15 minutes planning your top 3 goals for tomorrow.",
+      category: "growth",
+      pointValue: 10,
+      rules: { dailyCheckIn: true },
+      userId: dummyUserId,
+      difficulty: "easy",
+      tags: ["productivity", "planning"],
+    });
+
+    await taskService.createTask({
+      title: "Learn a New Word",
+      description: "Look up and understand a new vocabulary word.",
+      category: "learning",
+      pointValue: 5,
+      rules: { dailyCheckIn: false },
+      userId: dummyUserId,
+      difficulty: "easy",
+      tags: ["vocabulary", "education"],
+    });
+    console.log("Uncompleted tasks added.");
+
+    // --- Seed quest responses ---
 
     // --- Seed quest responses ---
     // questService.saveQuestResponse adds the timestamp

@@ -1,6 +1,7 @@
 import firestore from "@react-native-firebase/firestore";
 import { CreateTask, UpdateTask } from "./taskServices.types";
 import { Task } from "../types/task.types";
+import { DisplayTask } from "@/types/tasksScreen.types";
 import { Metrics } from "../types/user.types";
 import analyticsService from "./analyticsServices";
 
@@ -93,7 +94,9 @@ class TaskService {
             currentPoints: firestore.FieldValue.increment(taskPoints),
             lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
           });
-          console.log(`✅ User currentPoints updated by ${taskPoints} after task completion`);
+          console.log(
+            `✅ User currentPoints updated by ${taskPoints} after task completion`
+          );
 
           // Run analytics to update mood and other derived metrics
           await analyticsService.analyzeAndUpdateUserSchema(userId);
@@ -103,6 +106,78 @@ class TaskService {
       return true;
     } catch (error) {
       console.error("❌ Error updating task:", error);
+      return false;
+    }
+  }
+
+  async updateTaskCompletion(
+    taskId: string,
+    completed: boolean
+  ): Promise<boolean> {
+    try {
+      await this.tasksRef.doc(taskId).update({
+        completed,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      });
+
+      if (completed) {
+        const taskDoc = await this.tasksRef.doc(taskId).get();
+        const taskData = taskDoc.data() as Task;
+        const userId = taskData.userId;
+
+        if (userId) {
+          const userRef = firestore().collection("solo_spark_user").doc(userId);
+          const taskPoints = taskData.pointValue || 0;
+          await userRef.update({
+            currentPoints: firestore.FieldValue.increment(taskPoints),
+            lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+          });
+          console.log(
+            `✅ User currentPoints updated by ${taskPoints} after task completion`
+          );
+
+          // Optionally update metrics and run analytics
+          const metricsRef = firestore()
+            .collection("solo_spark_user")
+            .doc(userId)
+            .collection("metrics")
+            .doc("summary");
+
+          const metricsDoc = await metricsRef.get();
+
+          if (metricsDoc.exists()) {
+            const currentMetrics = metricsDoc.data() as Metrics;
+            const updatedMetrics: Metrics = {
+              ...currentMetrics,
+              engagementProfile: {
+                ...currentMetrics.engagementProfile,
+                interactionFrequency:
+                  currentMetrics.engagementProfile.interactionFrequency + 1,
+              },
+            };
+            await metricsRef.update(updatedMetrics);
+            console.log(
+              "✅ User metrics updated successfully after task completion"
+            );
+          } else {
+            const initialMetrics: Metrics = {
+              categoryAffinity: { growth: 0, social: 0 },
+              engagementProfile: {
+                interactionFrequency: 1,
+                completedQuests: [],
+              },
+              emotionalProfileMetrics: { currentMood: "", moodFrequency: "" },
+            };
+            await metricsRef.set(initialMetrics);
+            console.log(
+              "✅ Initial user metrics created successfully after task completion"
+            );
+          }
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("❌ Error updating task completion:", error);
       return false;
     }
   }
@@ -117,7 +192,7 @@ class TaskService {
     }
   }
 
-  async getTasksByUser(userId: string): Promise<Task[]> {
+  async getTasksByUser(userId: string): Promise<DisplayTask[]> {
     try {
       const snapshot = await this.tasksRef.where("userId", "==", userId).get();
       return snapshot.docs.map((doc) => ({

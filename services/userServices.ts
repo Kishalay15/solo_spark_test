@@ -429,6 +429,9 @@ class UserService {
         response: "A. Take deep breaths",
       });
 
+      // Run analytics to update mood and other derived metrics after quest response is saved
+      await analyticsService.analyzeAndUpdateUserSchema(userId);
+
       console.log("✅ Complete user profile created successfully!");
     } catch (error) {
       _logError(error, "Error creating complete profile");

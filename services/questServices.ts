@@ -124,9 +124,6 @@ class QuestService {
         console.log("✅ Initial user metrics created successfully");
       }
 
-      // Run analytics to update mood and other derived metrics
-      await analyticsService.analyzeAndUpdateUserSchema(currentUserId);
-
       return docRef.id;
     } catch (error) {
       _logError(error, "Firebase Error in saveQuestResponse");
