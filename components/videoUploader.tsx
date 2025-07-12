@@ -8,30 +8,38 @@ export default function VideoUploader({ userDocId }: VideoUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
 
-  const pickVideo = async () => {
+  const pickMedia = async () => {
     setIsUploading(true);
-    setUploadStatus("Picking video...");
+    setUploadStatus("Picking media...");
     try {
       const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
         allowsEditing: false,
       });
 
       if (res.canceled) {
-        setUploadStatus("Video selection cancelled.");
+        setUploadStatus("Media selection cancelled.");
         setIsUploading(false);
         return;
       }
 
       if (res.assets.length > 0) {
-        const uri = res.assets[0].uri;
-        setUploadStatus("Uploading video...");
+        const asset = res.assets[0];
+        const uri = asset.uri;
+        const fileType = asset.type === "video" ? "video" : "image";
+        const fileExtension = uri.substring(uri.lastIndexOf("."));
+
+        setUploadStatus(`Uploading ${fileType}...`);
         const downloadURL = await uploadToFirebaseStorage(
           uri,
-          `media/video/${userDocId}/${Date.now()}.mp4`
+          `media/${fileType}/${userDocId}/${Date.now()}${fileExtension}`
         );
+
         setUploadStatus("Upload complete!");
-        Alert.alert("Upload Success", `Video uploaded successfully: ${downloadURL}`);
+        Alert.alert(
+          "Upload Success",
+          `${fileType[0].toUpperCase() + fileType.slice(1)} uploaded successfully: ${downloadURL}`
+        );
       } else {
         setUploadStatus("No video selected.");
       }
@@ -45,14 +53,22 @@ export default function VideoUploader({ userDocId }: VideoUploaderProps) {
   };
 
   return (
-    <View style={{ padding: 20, alignItems: 'center' }}>
+    <View style={{ padding: 20, alignItems: "center" }}>
       <Button
-        title={isUploading ? "Uploading..." : "🎥 Pick / Record Video"}
-        onPress={pickVideo}
+        title={isUploading ? "Uploading..." : "🎥 Pick / Record Video or Image"}
+        onPress={pickMedia}
         disabled={isUploading}
       />
-      {isUploading && <ActivityIndicator size="small" color="#0000ff" style={{ marginTop: 10 }} />} 
-      {uploadStatus ? <Text style={{ marginTop: 10 }}>{uploadStatus}</Text> : null}
+      {isUploading && (
+        <ActivityIndicator
+          size="small"
+          color="#0000ff"
+          style={{ marginTop: 10 }}
+        />
+      )}
+      {uploadStatus ? (
+        <Text style={{ marginTop: 10 }}>{uploadStatus}</Text>
+      ) : null}
     </View>
   );
 }
