@@ -1,32 +1,52 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, ActivityIndicator, Alert } from "react-native";
-import { getAllShopItems } from "../../services/shopService";
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
+import shopService from "@/services/shopService";
 import { ShopItem } from "../../types/shopItem.types";
+import ShopItemDetails from "../../components/shopItemDetails";
 
 export default function ShopScreen() {
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
+
+  const fetchShopItems = async () => {
+    try {
+      setLoading(true);
+      const items = await shopService.getAllShopItems();
+      setShopItems(items);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching shop items:", err);
+      setError("Failed to load shop items.");
+      Alert.alert(
+        "Error",
+        "Failed to load shop items. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchShopItems = async () => {
-      try {
-        const items = await getAllShopItems();
-        setShopItems(items);
-      } catch (err) {
-        console.error("Error fetching shop items:", err);
-        setError("Failed to load shop items.");
-        Alert.alert(
-          "Error",
-          "Failed to load shop items. Please try again later."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchShopItems();
   }, []);
+
+  const handlePressShopItem = (item: ShopItem) => {
+    setSelectedShopItem(item);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedShopItem(null);
+    fetchShopItems(); // Re-fetch items after modal closes (for point updates)
+  };
 
   if (loading) {
     return (
@@ -46,7 +66,7 @@ export default function ShopScreen() {
   }
 
   const renderItem = ({ item }: { item: ShopItem }) => (
-    <View className="bg-white p-4 rounded-lg shadow-md mb-4">
+    <TouchableOpacity onPress={() => handlePressShopItem(item)} className="bg-white p-4 rounded-lg shadow-md mb-4">
       <Text className="text-lg font-semibold text-gray-800 mb-1">
         {item.name}
       </Text>
@@ -59,7 +79,7 @@ export default function ShopScreen() {
       <Text className="text-sm text-gray-500 mt-1">
         Available: {item.available ? "Yes" : "No"}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -77,6 +97,15 @@ export default function ShopScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.name + item.pointCost}
           contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
+
+      {selectedShopItem && (
+        <ShopItemDetails
+          item={selectedShopItem}
+          visible={!!selectedShopItem}
+          onClose={handleCloseModal}
+          onRedeemSuccess={fetchShopItems}
         />
       )}
     </View>

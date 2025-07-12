@@ -7,9 +7,9 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import questService from "../../services/questServices"; // Adjust path as needed
-import { AnalyticsQuest } from "../../services/analyticsServices.types"; // To type the fetched quest
-import { CreateQuestResponse } from "../../services/questServices.types"; // To type the response data
+import questService from "../../services/questServices";
+import { AnalyticsQuest } from "../../services/analyticsServices.types";
+import { CreateQuestResponse } from "../../services/questServices.types"; 
 import firestore from "@react-native-firebase/firestore";
 import { Metrics } from "../../types/user.types";
 
