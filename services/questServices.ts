@@ -73,6 +73,13 @@ class QuestService {
         responseWithTimestamp
       );
 
+      // Increment responseCount for the quest
+      const questRef = firestore().collection("solo_spark_quest").doc(responseData.questId || "quest-123");
+      await questRef.update({
+        responseCount: firestore.FieldValue.increment(1),
+      });
+      console.log(`✅ Quest responseCount incremented for quest: ${responseData.questId || "quest-123"}`);
+
       // Fetch quest details to get pointValue
       const completedQuest = await this.fetchQuestById(responseData.questId || "quest-123");
       const pointsEarned = completedQuest?.pointValue || 0;

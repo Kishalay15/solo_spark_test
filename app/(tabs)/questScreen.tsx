@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import questService from "../../services/questServices";
 import { AnalyticsQuest } from "../../services/analyticsServices.types";
-import { CreateQuestResponse } from "../../services/questServices.types"; 
+import { CreateQuestResponse } from "../../services/questServices.types";
 import firestore from "@react-native-firebase/firestore";
 import { Metrics } from "../../types/user.types";
 
@@ -22,7 +22,7 @@ const QuestScreen = () => {
   const [hasResponded, setHasResponded] = useState(false);
 
   //hardcoded
-  const dummyQuestId = "zJ7H9HiWdvsij2QrlW9V";
+  const dummyQuestId = "DOnPIBdWf37E1dk7CprC";
   const dummyUserId = "seed-user-123";
 
   useEffect(() => {

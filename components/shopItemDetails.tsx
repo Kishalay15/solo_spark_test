@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, Alert } from "react-native";
 import { ShopItem } from "../types/shopItem.types";
 import userService from "../services/userServices";
+import shopService from "@/services/shopService";
 
 interface ShopItemDetailsProps {
   item: ShopItem;
@@ -10,7 +11,12 @@ interface ShopItemDetailsProps {
   onRedeemSuccess: () => void;
 }
 
-export default function ShopItemDetails({ item, visible, onClose, onRedeemSuccess }: ShopItemDetailsProps) {
+export default function ShopItemDetails({
+  item,
+  visible,
+  onClose,
+  onRedeemSuccess,
+}: ShopItemDetailsProps) {
   const [userPoints, setUserPoints] = useState(0);
   const dummyUserId = "seed-user-123"; // Replace with actual user ID logic
 
@@ -34,13 +40,24 @@ export default function ShopItemDetails({ item, visible, onClose, onRedeemSucces
 
   const handleRedeem = async () => {
     if (userPoints < item.pointCost) {
-      Alert.alert("Insufficient Points", "You don't have enough points to redeem this item.");
+      Alert.alert(
+        "Insufficient Points",
+        "You don't have enough points to redeem this item."
+      );
       return;
     }
 
     try {
       await userService.deductPoints(dummyUserId, item.pointCost);
-      Alert.alert("Success", `You have redeemed ${item.name} for ${item.pointCost} points!`);
+      if (!item.id) {
+        Alert.alert("Error", "Item ID is missing, cannot redeem.");
+        return;
+      }
+      await shopService.updateShopItem(item.id, {});
+      Alert.alert(
+        "Success",
+        `You have redeemed ${item.name} for ${item.pointCost} points!`
+      );
       onRedeemSuccess();
       onClose();
     } catch (error: unknown) {
@@ -62,7 +79,9 @@ export default function ShopItemDetails({ item, visible, onClose, onRedeemSucces
         <Text className="text-2xl font-bold mb-2">{item.name}</Text>
         <Text className="text-base mb-2">{item.description}</Text>
         <Text className="text-sm italic mb-2">Type: {item.type}</Text>
-        <Text className="text-base font-bold mb-5">Cost: {item.pointCost} points</Text>
+        <Text className="text-base font-bold mb-5">
+          Cost: {item.pointCost} points
+        </Text>
         <Text className="text-base mb-5">Your Points: {userPoints}</Text>
 
         <Pressable
@@ -70,7 +89,9 @@ export default function ShopItemDetails({ item, visible, onClose, onRedeemSucces
           onPress={handleRedeem}
           disabled={!canRedeem}
         >
-          <Text className="text-white font-bold text-center">{canRedeem ? "Redeem" : "Insufficient Points"}</Text>
+          <Text className="text-white font-bold text-center">
+            {canRedeem ? "Redeem" : "Insufficient Points"}
+          </Text>
         </Pressable>
 
         <Pressable

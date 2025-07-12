@@ -15,7 +15,9 @@ export default function ShopScreen() {
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(null);
+  const [selectedShopItem, setSelectedShopItem] = useState<ShopItem | null>(
+    null
+  );
 
   const fetchShopItems = async () => {
     try {
@@ -66,7 +68,10 @@ export default function ShopScreen() {
   }
 
   const renderItem = ({ item }: { item: ShopItem }) => (
-    <TouchableOpacity onPress={() => handlePressShopItem(item)} className="bg-white p-4 rounded-lg shadow-md mb-4">
+    <TouchableOpacity
+      onPress={() => handlePressShopItem(item)}
+      className="bg-white p-4 rounded-lg shadow-md mb-4"
+    >
       <Text className="text-lg font-semibold text-gray-800 mb-1">
         {item.name}
       </Text>
@@ -95,7 +100,9 @@ export default function ShopScreen() {
         <FlatList
           data={shopItems}
           renderItem={renderItem}
-          keyExtractor={(item) => item.name + item.pointCost}
+          keyExtractor={(item, index) =>
+            item.id ?? `${item.name}-${item.pointCost}-${index}`
+          }
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}

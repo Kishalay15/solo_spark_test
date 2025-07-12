@@ -236,33 +236,13 @@ async function seedFirebase() {
       response: "My family/friends",
     });
 
-    await questService.saveQuestResponse(dummyUserId, {
-      questId: quest1Id,
-      response: "Learning something new",
-    });
-
-    await questService.saveQuestResponse(dummyUserId, {
-      questId: quest2Id,
-      response: "Talking to a friend",
-    });
-
-    await questService.saveQuestResponse(dummyUserId, {
-      questId: quest3Id,
-      response: "Experiencing something new",
-    });
-
-    await questService.saveQuestResponse(dummyUserId, {
-      questId: quest4Id,
-      response: "A simple pleasure",
-    });
-
     // --- Seed shop items ---
     console.log("Adding dummy shop items...");
     await shopService.createShopItem({
       name: "Meditation Guide",
       description: "A comprehensive guide to mindfulness meditation.",
       type: "digital",
-      pointCost: 100,
+      pointCost: 10,
       imageUrl: "https://example.com/meditation-guide.jpg",
       stock: 100,
     });
@@ -271,7 +251,7 @@ async function seedFirebase() {
       name: "Healthy Snack Box",
       description: "A curated box of healthy and delicious snacks.",
       type: "physical",
-      pointCost: 250,
+      pointCost: 20,
       imageUrl: "https://example.com/snack-box.jpg",
       stock: 50,
     });
@@ -280,7 +260,7 @@ async function seedFirebase() {
       name: "Virtual Yoga Class",
       description: "Access to a live virtual yoga class.",
       type: "service",
-      pointCost: 150,
+      pointCost: 50,
       imageUrl: "https://example.com/yoga-class.jpg",
       stock: 200,
     });
