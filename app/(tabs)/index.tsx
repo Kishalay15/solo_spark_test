@@ -19,7 +19,7 @@ const IndexScreen = () => {
   };
 
   const handleGoToProfile = () => {
-    router.push("/profile"); // Navigate to the profile tab
+    router.push("/profile");
   };
 
   return (
