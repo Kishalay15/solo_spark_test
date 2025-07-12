@@ -13,6 +13,7 @@ import {
   User,
   traitScore,
   UserSettings,
+  IAnalyticsService,
 } from "./userServices.types";
 import { CreateQuest, CreateQuestResponse, Quest } from "./questServices.types";
 import _logError from "@/utils/logErrors";
@@ -22,6 +23,7 @@ import {
   AnalyticsPersonalityTrait,
   AnalyticsUserProfile,
 } from "./analyticsServices.types";
+// import analyticsService from "./analyticsServices";
 
 class UserService {
   private getCurrentUserId(userId?: string): string {
@@ -361,8 +363,44 @@ class UserService {
     }
   }
 
+  async deductPoints(userId: string, amount: number): Promise<void> {
+    try {
+      const currentUserId = this.getCurrentUserId(userId);
+      const userRef = firestore()
+        .collection("solo_spark_user")
+        .doc(currentUserId);
+
+      await firestore().runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+          throw new Error("User not found!");
+        }
+
+        const currentPoints = userDoc.data()?.currentPoints || 0;
+        if (currentPoints < amount) {
+          throw new Error("Insufficient points.");
+        }
+
+        const newPoints = currentPoints - amount;
+        transaction.update(userRef, {
+          currentPoints: newPoints,
+          lastUpdatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      console.log(
+        `✅ Successfully deducted ${amount} points from user ${userId}`
+      );
+    } catch (error) {
+      _logError(error, "Error deducting points");
+      throw error;
+    }
+  }
+
   // Method to create a complete user profile with all subcollections
-  async createCompleteUserProfile(userId: string): Promise<void> {
+  async createCompleteUserProfile(
+    userId: string,
+    analyticsService: IAnalyticsService
+  ): Promise<void> {
     try {
       console.log("🔥 Creating complete user profile with subcollections...");
 

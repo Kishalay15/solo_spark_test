@@ -1,4 +1,5 @@
 import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
+import analyticsService from "./analyticsServices";
 export interface User {
   email: string;
   displayName: string;
@@ -73,3 +74,7 @@ export interface Metrics {
 export type CreatePointsTransaction = Partial<
   Omit<PointsTransaction, "timestamp">
 >;
+
+export interface IAnalyticsService {
+  analyzeAndUpdateUserSchema: (userId: string) => Promise<any>;
+}
