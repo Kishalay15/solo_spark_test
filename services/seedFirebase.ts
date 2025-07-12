@@ -2,6 +2,7 @@ import userService from "./userServices";
 import questService from "./questServices";
 import analyticsService from "./analyticsServices";
 import taskService from "./taskServices";
+import shopService from "./shopService";
 
 async function seedFirebase() {
   try {
@@ -255,13 +256,47 @@ async function seedFirebase() {
       response: "A simple pleasure",
     });
 
+    // --- Seed shop items ---
+    console.log("Adding dummy shop items...");
+    await shopService.createShopItem({
+      name: "Meditation Guide",
+      description: "A comprehensive guide to mindfulness meditation.",
+      type: "digital",
+      pointCost: 100,
+      imageUrl: "https://example.com/meditation-guide.jpg",
+      stock: 100,
+    });
+
+    await shopService.createShopItem({
+      name: "Healthy Snack Box",
+      description: "A curated box of healthy and delicious snacks.",
+      type: "physical",
+      pointCost: 250,
+      imageUrl: "https://example.com/snack-box.jpg",
+      stock: 50,
+    });
+
+    await shopService.createShopItem({
+      name: "Virtual Yoga Class",
+      description: "Access to a live virtual yoga class.",
+      type: "service",
+      pointCost: 150,
+      imageUrl: "https://example.com/yoga-class.jpg",
+      stock: 200,
+    });
+    console.log("Dummy shop items added.");
+
     console.log("✅ Firebase seeding completed successfully!");
 
-    // Optional: Run analytics after seeding
-    console.log("📊 Running analytics after seeding...");
-    // Note: analyticsService.analyzeAndUpdateUserSchema now accepts a userId
-    await analyticsService.analyzeAndUpdateUserSchema(dummyUserId);
-    console.log("✅ Analytics run completed.");
+    // // Optional: Run analytics after seeding
+    // console.log("📊 Running analytics after seeding...");
+    // // Note: analyticsService.analyzeAndUpdateUserSchema now accepts a userId
+    // await analyticsService.analyzeAndUpdateUserSchema(dummyUserId);
+    // console.log("✅ Analytics run completed.");
+
+    await userService.createCompleteUserProfile(dummyUserId, analyticsService);
+
+    console.log("✅ Firebase seeding completed successfully!");
   } catch (error) {
     console.error("❌ Error seeding Firebase:", error);
   }
