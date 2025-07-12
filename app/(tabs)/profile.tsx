@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, ScrollView } from "react-native";
-import analyticsService from "../services/analyticsServices";
-import { AnalyticsUserProfile } from "../services/analyticsServices.types";
+import analyticsService from "../../services/analyticsServices";
+import { AnalyticsUserProfile } from "../../services/analyticsServices.types";
 
 const ProfileScreen = () => {
   const [userProfile, setUserProfile] = useState<AnalyticsUserProfile | null>(
@@ -10,7 +10,7 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const dummyUserId = "seed-user-123"; // Use the same dummy ID as in seedFirebase.ts
+  const dummyUserId = "seed-user-123";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -100,23 +100,18 @@ const ProfileScreen = () => {
         <View className="bg-white rounded-lg p-4 mb-3 shadow-md">
           <Text className="text-base font-semibold text-gray-600 mb-1">Emotional Profile:</Text>
           <Text className="text-base text-gray-800">
-            {" "}
-            Current Mood: {userProfile.emotionalProfile.currentMood}
+            {" "}Current Mood: {userProfile.emotionalProfile.currentMood}
           </Text>
           <Text className="text-base text-gray-800">
-            {" "}
-            Mood Frequency: {userProfile.emotionalProfile.moodFrequency}
+            {" "}Mood Frequency: {userProfile.emotionalProfile.moodFrequency}
           </Text>
           <Text className="text-base text-gray-800">
-            {" "}
-            Emotional Needs: {userProfile.emotionalProfile.emotionalNeeds}
+            {" "}Emotional Needs: {userProfile.emotionalProfile.emotionalNeeds}
           </Text>
         </View>
       )}
     </ScrollView>
   );
 };
-
-
 
 export default ProfileScreen;
